@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Nectar Admin | Organic Editorial",
+  title: "Dashboard | Nectar",
   description: "Admin dashboard for Nectar Organic Editorial",
   icons: { icon: "/favicon.ico" }
 };
