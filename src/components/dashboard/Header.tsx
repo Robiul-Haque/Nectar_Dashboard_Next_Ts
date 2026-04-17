@@ -6,19 +6,8 @@ import NotificationBell from "./NotificationBell";
 import NotificationPanel from "./NotificationPanel";
 import { useNotifications } from "@/hooks/useNotifications";
 
-export default function Header({
-    onMenuClick,
-}: {
-    onMenuClick: () => void;
-}) {
-    const {
-        notifications,
-        open,
-        hasUnread,
-        togglePanel,
-        markAsRead,
-        markAllAsRead,
-    } = useNotifications();
+export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
+    const { notifications, open, hasUnread, togglePanel, markAsRead, markAllAsRead } = useNotifications();
 
     return (
         <>
