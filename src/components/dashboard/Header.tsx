@@ -11,68 +11,53 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
     return (
         <>
-            <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800 transition-colors">
+            <header className="md:pe-6 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
 
-                {/* MAIN GRID (IMPORTANT FIX) */}
-                <div className="grid grid-cols-3 items-center h-full px-4 md:px-6">
+                <div className="flex items-center justify-between h-full px-4 md:px-6">
 
                     {/* LEFT */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
+
+                        {/* Mobile Menu */}
                         <button
                             onClick={onMenuClick}
-                            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                         >
-                            <Menu />
+                            <Menu className="w-5 h-5" />
                         </button>
 
-                        {/* LOGO (RESTORED) */}
-                        <div className="hidden sm:flex items-center gap-2">
-                            <div className="w-8 h-8 bg-green-600 rounded-xl flex items-center justify-center">
-                                <span className="text-white font-bold">
-                                    N
-                                </span>
-                            </div>
-
-                            <div className="leading-tight">
-                                <h1 className="font-semibold text-sm text-gray-900 dark:text-white">
-                                    Nectar Admin
-                                </h1>
-                                <p className="text-[10px] text-gray-500">
-                                    Organic Dashboard
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* CENTER (SEARCH FIXED PERFECTLY CENTERED) */}
-                    <div className="flex justify-center">
-                        <div className="relative w-full max-w-md hidden md:block">
-                            <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
+                        {/* Search */}
+                        <div className="relative w-full max-w-md hidden sm:block">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
-                                placeholder="Search orders..."
-                                className="w-full pl-10 pr-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                type="text"
+                                placeholder="Search orders, products..."
+                                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500 transition"
                             />
                         </div>
                     </div>
 
                     {/* RIGHT */}
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center gap-2 md:gap-3">
+
+                        {/* Theme */}
                         <ThemeToggle />
 
+                        {/* Notification */}
                         <NotificationBell
                             hasUnread={hasUnread}
                             onClick={togglePanel}
                         />
 
-                        <div className="w-9 h-9 bg-green-600 rounded-xl text-white flex items-center justify-center">
+                        {/* Profile */}
+                        <div className="w-9 h-9 rounded-xl bg-linear-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center font-semibold cursor-pointer">
                             AR
                         </div>
                     </div>
-
                 </div>
             </header>
 
-            {/* PANEL */}
+            {/* Notification Panel */}
             <NotificationPanel
                 open={open}
                 notifications={notifications}

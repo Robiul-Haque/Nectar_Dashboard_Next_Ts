@@ -171,17 +171,30 @@ function Card({
     return (
         <motion.div
             variants={itemVariants}
-            whileHover={{ y: -3 }}
-            className="bg-white dark:bg-gray-900 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800"
+            whileHover={{ y: -4 }}
+            className="relative bg-white dark:bg-gray-900 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden"
         >
+            {/* 🔥 Corner Orb (OUTSIDE + PARTIAL INSIDE) */}
+            <div className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full bg-[#53b175]/10 blur-xl" />
+
+            {/* Content */}
             <p className="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">
                 {title}
             </p>
-            <h2 className={`text-2xl font-bold mt-1 ${danger ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}>
+
+            <h2
+                className={`text-2xl font-bold mt-1 ${danger ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}
+            >
                 {value}
             </h2>
+
             {extra && (
-                <p className={`text-xs mt-2 font-medium ${danger ? "text-red-600" : "text-emerald-600 dark:text-emerald-400"}`}>
+                <p
+                    className={`text-xs mt-2 font-medium ${danger
+                        ? "text-red-600"
+                        : "text-emerald-600 dark:text-emerald-400"
+                        }`}
+                >
                     {extra}
                 </p>
             )}

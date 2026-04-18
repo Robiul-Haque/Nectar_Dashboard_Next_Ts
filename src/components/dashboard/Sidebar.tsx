@@ -24,9 +24,9 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:flex w-72 h-screen flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-                <div className="pt-20 pb-6 px-6">
-                    {/* <div className="flex items-center gap-3 mb-10">
+            <aside className="hidden lg:flex w-72 h-screen flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-50">
+                <div className="p-6">
+                    <div className="flex items-center gap-3 mb-10">
                         <div className="w-10 h-10 bg-green-600 rounded-2xl flex items-center justify-center">
                             <span className="text-white font-bold text-2xl">N</span>
                         </div>
@@ -34,7 +34,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                             <h2 className="font-bold text-2xl tracking-tight">Nectar</h2>
                             <p className="text-xs text-green-600 font-medium">Organic Editorial</p>
                         </div>
-                    </div> */}
+                    </div>
 
                     <nav className="space-y-3">
                         {navItems.map((item) => {
