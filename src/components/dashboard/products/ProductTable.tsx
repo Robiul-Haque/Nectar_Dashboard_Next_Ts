@@ -1,6 +1,20 @@
 "use client";
 
-const products = [
+import { useMemo, useState } from "react";
+
+type Product = {
+    id: number;
+    name: string;
+    sku: string;
+    category: string;
+    stock: number;
+    status: string;
+    price: number;
+    active: boolean;
+};
+
+/* ---------------- DUMMY DATA ---------------- */
+const products: Product[] = [
     {
         id: 1,
         name: "Organic Heirloom Kale",
@@ -37,49 +51,83 @@ const products = [
         sku: "DRY-551-BUTR",
         category: "Dairy",
         stock: 0,
-        status: "Critical",
+        status: "Out of Stock",
         price: 8.15,
         active: false,
     },
-    ...Array.from({ length: 6 }).map((_, i) => ({
+    ...Array.from({ length: 16 }).map((_, i) => ({
         id: i + 5,
         name: "Fresh Product " + (i + 5),
         sku: "SKU-" + (i + 5),
         category: "General",
         stock: Math.floor(Math.random() * 100),
         status: "Healthy",
-        price: (Math.random() * 10).toFixed(2),
-        active: true,
+        price: Number((Math.random() * 10).toFixed(2)),
+        active: Math.random() > 0.3,
     })),
 ];
 
-export default function ProductTable() {
+export default function ProductTable({ filter }: { filter: string }) {
+    const [page, setPage] = useState(1);
+    const limit = 10;
+
+    /* ---------------- FILTER ---------------- */
+    const filtered = useMemo(() => {
+        let data = [...products];
+
+        switch (filter) {
+            case "low":
+                return data.filter((p) => p.stock > 0 && p.stock < 10);
+            case "high":
+                return data.filter((p) => p.stock >= 50);
+            case "lowPrice":
+                return [...data].sort((a, b) => a.price - b.price);
+            case "highPrice":
+                return [...data].sort((a, b) => b.price - a.price);
+            case "active":
+                return data.filter((p) => p.active);
+            case "inactive":
+                return data.filter((p) => !p.active);
+            default:
+                return data;
+        }
+    }, [filter]);
+
+    /* ---------------- PAGINATION ---------------- */
+    const totalPages = Math.ceil(filtered.length / limit);
+
+    const paginated = useMemo(() => {
+        return filtered.slice((page - 1) * limit, page * limit);
+    }, [filtered, page]);
+
     return (
         <div className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
 
+            {/* TABLE */}
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
 
                     {/* HEADER */}
                     <thead className="bg-gray-50 dark:bg-gray-950 text-gray-500 border-b dark:border-gray-800">
                         <tr>
-                            <th className="p-4 w-10"><input type="checkbox" /></th>
+                            <th className="p-4 w-10"></th>
                             <th className="p-4 text-left">PRODUCT</th>
                             <th className="p-4 text-left">CATEGORY</th>
                             <th className="p-4 text-left">STOCK LEVEL</th>
                             <th className="p-4 text-left">PRICE</th>
                             <th className="p-4 text-left">STATUS</th>
+                            <th className="p-4 text-right">ACTIONS</th>
                         </tr>
                     </thead>
 
                     {/* BODY */}
                     <tbody>
-                        {products.map((p) => (
+                        {paginated.map((p) => (
                             <tr
                                 key={p.id}
                                 className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                             >
-                                <td className="p-4"><input type="checkbox" /></td>
+                                <td className="p-4"></td>
 
                                 {/* PRODUCT */}
                                 <td className="p-4 flex items-center gap-3">
@@ -127,7 +175,11 @@ export default function ProductTable() {
                                                 : "text-emerald-600"
                                             }`}
                                     >
-                                        {p.status}
+                                        {p.stock === 0
+                                            ? "Out of Stock"
+                                            : p.stock < 10
+                                                ? "Low Stock"
+                                                : "Healthy"}
                                     </span>
                                 </td>
 
@@ -153,24 +205,66 @@ export default function ProductTable() {
                                         {p.active ? "Active" : "Inactive"}
                                     </span>
                                 </td>
+
+                                {/* ACTIONS (UPGRADED) */}
+                                <td className="p-4 text-right">
+                                    <div className="flex justify-end gap-2">
+
+                                        <button className="px-3 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition">
+                                            View
+                                        </button>
+
+                                        <button className="px-3 py-1 text-xs rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition">
+                                            Edit
+                                        </button>
+
+                                        <button className="px-3 py-1 text-xs rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition">
+                                            Delete
+                                        </button>
+
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
 
-            {/* PAGINATION */}
+            {/* PAGINATION (FUNCTIONAL + CLEAN) */}
             <div className="flex items-center justify-between p-4 text-sm text-gray-500">
-                <span>Showing 1 to 10 of 128 products</span>
+                <span>
+                    Page {page} of {totalPages}
+                </span>
 
                 <div className="flex items-center gap-2">
-                    <button className="w-8 h-8 rounded-lg bg-emerald-600 text-white">
-                        1
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => p - 1)}
+                        className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 disabled:opacity-40"
+                    >
+                        Prev
                     </button>
-                    <button className="w-8 h-8">2</button>
-                    <button className="w-8 h-8">3</button>
-                    <span>...</span>
-                    <button className="w-8 h-8">32</button>
+
+                    {Array.from({ length: totalPages }).map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setPage(i + 1)}
+                            className={`w-8 h-8 rounded-lg ${page === i + 1
+                                ? "bg-emerald-600 text-white"
+                                : "bg-gray-100 dark:bg-gray-800"
+                                }`}
+                        >
+                            {i + 1}
+                        </button>
+                    ))}
+
+                    <button
+                        disabled={page === totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                        className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 disabled:opacity-40"
+                    >
+                        Next
+                    </button>
                 </div>
             </div>
         </div>
