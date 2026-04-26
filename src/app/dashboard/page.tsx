@@ -1,4 +1,3 @@
-// src/app/dashboard/page.tsx
 "use client";
 
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -12,15 +11,15 @@ const data = [
     { name: "Thu", sales: 700 },
     { name: "Fri", sales: 600 },
     { name: "Sat", sales: 200 },
-    { name: "Sun", sales: 300 },
+    { name: "Sun", sales: 300 }
 ];
 
 const pageVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
-        transition: { staggerChildren: 0.1, delayChildren: 0.05 },
-    },
+        transition: { staggerChildren: 0.1, delayChildren: 0.05 }
+    }
 };
 
 const itemVariants: Variants = {
@@ -28,8 +27,8 @@ const itemVariants: Variants = {
     show: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] },
-    },
+        transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }
+    }
 };
 
 export default function DashboardPage() {

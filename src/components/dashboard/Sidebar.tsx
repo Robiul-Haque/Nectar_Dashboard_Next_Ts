@@ -10,7 +10,7 @@ const navItems = [
     { label: "Categories", href: "/dashboard/categories", icon: Tags },
     { label: "Customers", href: "/dashboard/customers", icon: Users },
     { label: "Support", href: "/dashboard/support", icon: HandHelping },
-    { label: "Settings", href: "/dashboard/settings", icon: Settings }
+    // { label: "Settings", href: "/dashboard/settings", icon: Settings }
 ];
 
 interface SidebarProps {

@@ -1,17 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-    Search,
-    Phone,
-    Video,
-    MoreVertical,
-    Send,
-    Paperclip,
-    Smile,
-    CheckCheck,
-    FileText,
-} from "lucide-react";
+import { Search, Phone, Video, MoreVertical, Send, Paperclip, Smile, CheckCheck, FileText } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 
 type Contact = {
@@ -41,7 +31,7 @@ const contacts: Contact[] = [
         avatar: "https://i.pravatar.cc/150?img=32",
         message: "I've attached the latest greenhouse report.",
         time: "10:42 AM",
-        online: true,
+        online: true
     },
     {
         id: 2,
@@ -50,7 +40,7 @@ const contacts: Contact[] = [
         avatar: "https://i.pravatar.cc/150?img=12",
         message: "Can we review the inventory tomorrow?",
         time: "Yesterday",
-        unread: 2,
+        unread: 2
     },
     {
         id: 3,
@@ -58,7 +48,7 @@ const contacts: Contact[] = [
         role: "Supply Coordinator",
         avatar: "https://i.pravatar.cc/150?img=5",
         message: "The shipment has arrived.",
-        time: "Monday",
+        time: "Monday"
     },
     {
         id: 4,
@@ -66,8 +56,8 @@ const contacts: Contact[] = [
         role: "Warehouse Supervisor",
         avatar: "https://i.pravatar.cc/150?img=22",
         message: "Please confirm the order details.",
-        time: "Sunday",
-    },
+        time: "Sunday"
+    }
 ];
 
 const messages: Message[] = [
@@ -75,13 +65,13 @@ const messages: Message[] = [
         id: 1,
         sender: "other",
         text: "Hi! I wanted to check in on the new organic fertilizer order. Did it arrive at the warehouse yet?",
-        time: "10:28 AM",
+        time: "10:28 AM"
     },
     {
         id: 2,
         sender: "me",
         text: "Yes, it just came in this morning. The pallets look good, no damaged bags so far. I'll have the team start inventory shortly.",
-        time: "10:30 AM",
+        time: "10:30 AM"
     },
     {
         id: 3,
@@ -89,7 +79,7 @@ const messages: Message[] = [
         image:
             "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?q=80&w=1200&auto=format&fit=crop",
         text: "I've attached the latest greenhouse report. The humidity levels in Sector B are perfect right now.",
-        time: "10:42 AM",
+        time: "10:42 AM"
     },
 ];
 
@@ -97,7 +87,7 @@ const sharedMedia = [
     "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=500&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=500&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=500&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=500&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=500&auto=format&fit=crop"
 ];
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];

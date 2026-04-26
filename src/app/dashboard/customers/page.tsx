@@ -1,26 +1,8 @@
-// app/(dashboard)/customers/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-    Search,
-    Filter,
-    Download,
-    ChevronLeft,
-    ChevronRight,
-    MoreHorizontal,
-    Mail,
-    ShoppingBag,
-    Calendar,
-    Users,
-    DollarSign,
-    Package,
-} from "lucide-react";
+import { Search, Filter, Download, ChevronLeft, ChevronRight, MoreHorizontal, Mail, ShoppingBag, Users, DollarSign, Package } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-/* -------------------------------------------------------------------------- */
-/*                                    Types                                   */
-/* -------------------------------------------------------------------------- */
 
 type CustomerStatus = "Active" | "Blocked" | "Pending";
 type OrderStatus = "Delivered" | "Processing" | "Shipped" | "Cancelled";
@@ -39,10 +21,6 @@ interface Customer {
     lastOrder: string;
     orderStatus: OrderStatus;
 }
-
-/* -------------------------------------------------------------------------- */
-/*                                Dummy Data                                  */
-/* -------------------------------------------------------------------------- */
 
 const customers: Customer[] = [
     {
@@ -159,45 +137,21 @@ const customers: Customer[] = [
     },
 ];
 
-/* -------------------------------------------------------------------------- */
-/*                              Helper Functions                              */
-/* -------------------------------------------------------------------------- */
 
 const statusStyles: Record<CustomerStatus, string> = {
-    Active:
-        "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
-    Blocked:
-        "bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
-    Pending:
-        "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
+    Active: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
+    Blocked: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
+    Pending: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
 };
 
 const orderStyles: Record<OrderStatus, string> = {
-    Delivered:
-        "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
-    Processing:
-        "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
-    Shipped:
-        "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400",
-    Cancelled:
-        "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+    Delivered: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+    Processing: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
+    Shipped: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400",
+    Cancelled: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                UI Components                               */
-/* -------------------------------------------------------------------------- */
-
-function StatCard({
-    title,
-    value,
-    icon: Icon,
-    subtitle,
-}: {
-    title: string;
-    value: string;
-    subtitle: string;
-    icon: any;
-}) {
+function StatCard({ title, value, icon: Icon, subtitle }: { title: string; value: string; subtitle: string; icon: any; }) {
     return (
         <motion.div
             whileHover={{ y: -4 }}
@@ -244,10 +198,6 @@ function OrderBadge({ status }: { status: OrderStatus }) {
         </span>
     );
 }
-
-/* -------------------------------------------------------------------------- */
-/*                                   Page                                     */
-/* -------------------------------------------------------------------------- */
 
 export default function CustomersPage() {
     const [search, setSearch] = useState("");
