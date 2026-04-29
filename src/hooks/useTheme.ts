@@ -1,38 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "dark" | "light";
 
-export function useTheme() {
-    const [theme, setTheme] = useState<Theme>("dark");
+const THEME_CHANGE_EVENT = "theme_change";
 
-    useEffect(() => {
-        const saved = localStorage.getItem("theme") as Theme | null;
+function applyTheme(theme: Theme) {
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(theme);
+}
 
-        if (saved) {
-            applyTheme(saved);
-            setTheme(saved);
-        } else {
-            const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            const systemTheme = systemDark ? "dark" : "light";
+function getStoredTheme(): Theme | null {
+    const saved = localStorage.getItem("theme");
+    return saved === "dark" || saved === "light" ? saved : null;
+}
 
-            applyTheme(systemTheme);
-            setTheme(systemTheme);
-        }
-    }, []);
+function getThemeSnapshot(): Theme {
+    if (typeof window === "undefined") {
+        return "dark";
+    }
 
-    const applyTheme = (theme: Theme) => {
-        document.documentElement.classList.remove("light", "dark");
-        document.documentElement.classList.add(theme);
+    return getStoredTheme() ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+
+function subscribeTheme(onStoreChange: () => void) {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleChange = () => {
+        const theme = getThemeSnapshot();
+        applyTheme(theme);
+        onStoreChange();
     };
+
+    window.addEventListener("storage", handleChange);
+    window.addEventListener(THEME_CHANGE_EVENT, handleChange);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+        window.removeEventListener("storage", handleChange);
+        window.removeEventListener(THEME_CHANGE_EVENT, handleChange);
+        mediaQuery.removeEventListener("change", handleChange);
+    };
+}
+
+export function useTheme() {
+    const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, () => "dark");
 
     const toggleTheme = () => {
         const newTheme = theme === "dark" ? "light" : "dark";
 
         applyTheme(newTheme);
         localStorage.setItem("theme", newTheme);
-        setTheme(newTheme);
+        window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
     };
 
     return { theme, toggleTheme };

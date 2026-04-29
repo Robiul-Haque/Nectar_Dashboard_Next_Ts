@@ -2,16 +2,18 @@
 
 import { useEffect } from "react";
 
+type Theme = "dark" | "light";
+
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const saved = localStorage.getItem("theme");
+        const savedTheme: Theme | null = saved === "dark" || saved === "light" ? saved : null;
 
-        if (saved) {
-            document.documentElement.classList.add(saved);
-        } else {
-            const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            document.documentElement.classList.add(systemDark ? "dark" : "light");
-        }
+        const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme = savedTheme ?? (systemDark ? "dark" : "light");
+
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(theme);
     }, []);
 
     return <>{children}</>;
