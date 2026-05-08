@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import ThemeProvider from "@/providers/ThemeProvider";
 import "./globals.css";
+import ReduxProvider from "@/providers/ReduxProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,7 +39,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInitializerScript }} />
       </head>
       <body className="antialiased bg-gray-50 dark:bg-gray-950">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ReduxProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </ReduxProvider>
       </body>
     </html>
   );
