@@ -92,7 +92,7 @@ export default function LoginPage() {
 
             setSuccess(true);
 
-            toast.success("Login successful 🚀\nWelcome back to admin dashboard");
+            toast.success("Login successful");
 
             // redirect
             setTimeout(() => {
