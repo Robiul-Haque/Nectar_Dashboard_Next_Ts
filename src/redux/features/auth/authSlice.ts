@@ -29,7 +29,7 @@ const authSlice = createSlice({
             state,
             action: PayloadAction<{
                 accessToken: string;
-                user: DecodedUser;
+                user: DecodedUser | null;
             }>
         ) => {
             state.accessToken = action.payload.accessToken;

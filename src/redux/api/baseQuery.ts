@@ -12,10 +12,8 @@ import {
     setCredentials,
 } from "../features/auth/authSlice";
 
-import { API_BASE_URL } from "@/lib/constants/api";
-
 const rawBaseQuery = fetchBaseQuery({
-    baseUrl: API_BASE_URL,
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
 
     credentials: "include",
 
