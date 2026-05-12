@@ -15,6 +15,10 @@ import {
     X,
     AlertTriangle,
 } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { logout } from "@/redux/features/auth/authSlice";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -135,12 +139,15 @@ export default function Sidebar({
     setIsOpen,
 }: SidebarProps) {
     const pathname = usePathname();
+    const dispatch = useDispatch();
+    const router = useRouter();
     const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
     const handleLogout = () => {
-        // Future logout logic goes here
-        console.log("Logout confirmed");
+        dispatch(logout());
         setLogoutModalOpen(false);
+        toast.success("Logged out successfully");
+        router.push("/login");
     };
 
     return (

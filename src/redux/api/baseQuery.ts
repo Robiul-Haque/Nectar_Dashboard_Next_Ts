@@ -11,6 +11,7 @@ import {
     logout,
     setCredentials,
 } from "../features/auth/authSlice";
+import { setCookie } from "@/lib/cookies";
 
 const rawBaseQuery = fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -83,6 +84,8 @@ export const baseQueryWithRefresh: BaseQueryFn<
                                 .accessToken,
                     })
                 );
+
+                setCookie("accessToken", refreshData.data.accessToken);
 
                 // Retry original request
                 result = await rawBaseQuery(

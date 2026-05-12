@@ -1,9 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Mail, User, Lock, X } from "lucide-react";
+import { Camera, Mail, User, Lock, X, LogOut } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import { logout } from "@/redux/features/auth/authSlice";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface UserProfile {
     name: string;
@@ -60,12 +64,22 @@ export default function ProfileModal({
         return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }, [user.name]);
 
+    const dispatch = useDispatch();
+    const router = useRouter();
+
     const handleSave = () => {
         console.log({
             name,
             password,
         });
         onClose();
+    };
+
+    const handleLogout = () => {
+        dispatch(logout());
+        onClose();
+        toast.success("Logged out successfully");
+        router.push("/login");
     };
 
     return (
@@ -194,20 +208,30 @@ export default function ProfileModal({
                             </div>
 
                             {/* Footer */}
-                            <div className="flex flex-col sm:flex-row gap-3 justify-end px-6 py-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50">
+                            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between px-6 py-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50">
                                 <button
-                                    onClick={onClose}
-                                    className="px-5 py-2.5 rounded-2xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                                    onClick={handleLogout}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all"
                                 >
-                                    Cancel
+                                    <LogOut className="w-4 h-4" />
+                                    Logout
                                 </button>
 
-                                <button
-                                    onClick={handleSave}
-                                    className="px-6 py-2.5 rounded-2xl bg-linear-to-r from-emerald-500 to-green-600 text-white font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all duration-300"
-                                >
-                                    Save Changes
-                                </button>
+                                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                    <button
+                                        onClick={onClose}
+                                        className="px-5 py-2.5 rounded-2xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        onClick={handleSave}
+                                        className="px-6 py-2.5 rounded-2xl bg-linear-to-r from-emerald-500 to-green-600 text-white font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all duration-300"
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </motion.div>
