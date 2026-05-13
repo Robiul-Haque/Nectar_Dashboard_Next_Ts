@@ -1,62 +1,93 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, LabelList } from "recharts";
 import { motion, Variants } from "framer-motion";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
-const timeframes: Record<string, { name: string; sales: number }[]> = {
+const timeframes: Record<string, { name: string; sales: number; orders: number; growth: string }[]> = {
     weekly: [
-        { name: "Mon", sales: 420 },
-        { name: "Tue", sales: 380 },
-        { name: "Wed", sales: 520 },
-        { name: "Thu", sales: 750 },
-        { name: "Fri", sales: 610 },
-        { name: "Sat", sales: 250 },
-        { name: "Sun", sales: 400 }
+        { name: "Mon", sales: 420, orders: 12, growth: "+14%" },
+        { name: "Tue", sales: 380, orders: 10, growth: "-5%" },
+        { name: "Wed", sales: 520, orders: 18, growth: "+22%" },
+        { name: "Thu", sales: 750, orders: 24, growth: "+35%" },
+        { name: "Fri", sales: 610, orders: 20, growth: "+18%" },
+        { name: "Sat", sales: 250, orders: 8, growth: "-12%" },
+        { name: "Sun", sales: 400, orders: 14, growth: "+8%" }
     ],
     monthly: [
-        { name: "Week 1", sales: 2400 },
-        { name: "Week 2", sales: 3100 },
-        { name: "Week 3", sales: 1800 },
-        { name: "Week 4", sales: 4200 }
+        { name: "Week 1", sales: 2400, orders: 84, growth: "+10%" },
+        { name: "Week 2", sales: 3100, orders: 112, growth: "+24%" },
+        { name: "Week 3", sales: 1800, orders: 65, growth: "-15%" },
+        { name: "Week 4", sales: 4200, orders: 148, growth: "+42%" }
     ],
     "6months": [
-        { name: "Jan", sales: 8400 },
-        { name: "Feb", sales: 12100 },
-        { name: "Mar", sales: 15800 },
-        { name: "Apr", sales: 11200 },
-        { name: "May", sales: 14500 },
-        { name: "Jun", sales: 18900 }
+        { name: "Jan", sales: 8400, orders: 312, growth: "+5%" },
+        { name: "Feb", sales: 12100, orders: 425, growth: "+18%" },
+        { name: "Mar", sales: 15800, orders: 560, growth: "+25%" },
+        { name: "Apr", sales: 11200, orders: 390, growth: "-12%" },
+        { name: "May", sales: 14500, orders: 510, growth: "+15%" },
+        { name: "Jun", sales: 18900, orders: 680, growth: "+28%" }
     ],
     yearly: [
-        { name: "2021", sales: 121000 },
-        { name: "2022", sales: 158000 },
-        { name: "2023", sales: 112000 },
-        { name: "2024", sales: 145000 },
-        { name: "2025", sales: 168000 }
+        { name: "2021", sales: 121000, orders: 4200, growth: "+12%" },
+        { name: "2022", sales: 158000, orders: 5600, growth: "+25%" },
+        { name: "2023", sales: 112000, orders: 3800, growth: "-18%" },
+        { name: "2024", sales: 145000, orders: 5100, growth: "+15%" },
+        { name: "2025", sales: 168000, orders: 6200, growth: "+20%" }
     ]
 };
+
+const renderCustomBarLabel = (props: any) => {
+    const { x, y, width, value, payload } = props;
+
+    if (!payload) return null;
+
+    return (
+        <g>
+            <text
+                x={x + width / 2}
+                y={y - 25}
+                fill="currentColor"
+                textAnchor="middle"
+                className="text-[11px] font-bold fill-gray-900 dark:fill-white transition-all duration-300"
+            >
+                ${value?.toLocaleString() || '0'}
+            </text>
+            <text
+                x={x + width / 2}
+                y={y - 10}
+                fill="currentColor"
+                textAnchor="middle"
+                className="text-[9px] font-semibold fill-gray-500 dark:fill-gray-400 opacity-80 uppercase tracking-tighter"
+            >
+                {payload.orders || 0} Orders
+            </text>
+        </g>
+    );
+};
+
+
 
 const pageVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
-        transition: { 
-            staggerChildren: 0.12, 
-            delayChildren: 0.1 
+        transition: {
+            staggerChildren: 0.08,
+            delayChildren: 0.05
         }
     }
 };
 
 const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 25 },
+    hidden: { opacity: 0, y: 15 },
     show: {
         opacity: 1,
         y: 0,
-        transition: { 
-            duration: 0.6, 
-            ease: [0.22, 1, 0.36, 1] 
+        transition: {
+            duration: 0.4,
+            ease: [0.23, 1, 0.32, 1]
         }
     }
 };
@@ -83,7 +114,7 @@ export default function DashboardPage() {
                 className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800/50"
             >
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                    <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
                         Welcome back, Admin!
                     </h1>
                     <p className="text-gray-600 dark:text-gray-300 text-sm font-semibold mt-1">
@@ -119,23 +150,37 @@ export default function DashboardPage() {
                     variants={itemVariants}
                     className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-[32px] p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800"
                 >
-                    <div className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                        <div>
-                            <h3 className="font-black text-xl text-gray-900 dark:text-white">
-                                Sales Overview
-                            </h3>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                Revenue Performance Tracking
-                            </p>
+                    <div className="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h3 className="font-semibold text-xl text-gray-900 dark:text-white">
+                                        Sales Overview
+                                    </h3>
+                                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                </div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider mt-1">
+                                    Revenue Performance Tracking
+                                </p>
+                            </div>
+                            
+                            <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-800" />
+                            
+                            <div>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold mb-0.5">Total Revenue</p>
+                                <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                                    ${currentData.reduce((acc, item) => acc + item.sales, 0).toLocaleString()}
+                                </p>
+                            </div>
                         </div>
 
                         {/* Timeframe Selector */}
-                        <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+                        <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
                             {timeframeOptions.map((option) => (
                                 <button
                                     key={option.id}
-                                    onClick={() => setSelectedTimeframe(option.id as any)}
-                                    className={`relative px-5 py-2 text-xs font-black transition-all duration-300 rounded-xl ${selectedTimeframe === option.id
+                                    onClick={() => setSelectedTimeframe(option.id as keyof typeof timeframes)}
+                                    className={`relative px-5 py-2 text-xs font-semibold transition-all duration-300 rounded-xl ${selectedTimeframe === option.id
                                         ? "text-emerald-700 dark:text-emerald-400"
                                         : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                         }`}
@@ -144,7 +189,7 @@ export default function DashboardPage() {
                                         <motion.div
                                             layoutId="activeTab"
                                             className="absolute inset-0 bg-white dark:bg-gray-700 rounded-xl shadow-md"
-                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                            transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
                                         />
                                     )}
                                     <span className="relative z-10">{option.label}</span>
@@ -155,7 +200,7 @@ export default function DashboardPage() {
 
                     <div className="h-80 md:h-96">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={currentData}>
+                            <BarChart data={currentData} margin={{ top: 40, right: 0, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
@@ -182,15 +227,39 @@ export default function DashboardPage() {
                                     cursor={{ fill: "rgba(16, 185, 129, 0.03)" }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const val = payload[0].value as number;
+                                            const data = payload[0].payload;
+                                            const isPositive = !data.growth.startsWith('-');
+                                            
                                             return (
-                                                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-4 shadow-2xl shadow-emerald-500/10">
-                                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-black mb-1">
-                                                        {label}
-                                                    </p>
-                                                    <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                                                        ${val.toLocaleString()}
-                                                    </p>
+                                                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-5 shadow-2xl shadow-emerald-500/10 min-w-[200px]">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                                                            {label}
+                                                        </p>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                            isPositive 
+                                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' 
+                                                                : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
+                                                        }`}>
+                                                            {data.growth}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold mb-0.5">Revenue</p>
+                                                            <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                                                                ${data.sales.toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                        
+                                                        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
+                                                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold">Orders</p>
+                                                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                {data.orders}
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             );
                                         }
@@ -199,10 +268,15 @@ export default function DashboardPage() {
                                 />
                                 <Bar
                                     dataKey="sales"
-                                    radius={[10, 10, 0, 0]}
-                                    // Increased Bar Width
+                                    radius={[12, 12, 0, 0]}
                                     barSize={selectedTimeframe === 'weekly' ? 56 : 42}
+                                    animationDuration={1000}
+                                    animationEasing="cubic-bezier(0.25, 0.1, 0.25, 1)"
                                 >
+                                    <LabelList
+                                        dataKey="sales"
+                                        content={renderCustomBarLabel}
+                                    />
                                     {currentData.map((entry, index) => (
                                         <Cell
                                             key={`cell-${index}`}
@@ -226,7 +300,7 @@ export default function DashboardPage() {
                     className="bg-white dark:bg-gray-900 rounded-[32px] p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col"
                 >
                     <div className="flex items-center justify-between mb-8">
-                        <h3 className="font-black text-xl text-gray-900 dark:text-white tracking-tight">
+                        <h3 className="font-semibold text-xl text-gray-900 dark:text-white tracking-tight">
                             Popular Products
                         </h3>
                         <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -263,7 +337,7 @@ export default function DashboardPage() {
                         />
                     </div>
 
-                    <button className="mt-8 w-full py-4 text-[11px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-2xl transition-all duration-300 active:scale-[0.98] border border-emerald-500/10">
+                    <button className="mt-8 w-full py-4 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-2xl transition-all duration-300 active:scale-[0.98] border border-emerald-500/10">
                         View Full Inventory
                     </button>
                 </motion.div>
@@ -293,12 +367,12 @@ function Card({
             <div className={`absolute -right-10 -top-10 h-36 w-36 rounded-full blur-3xl transition-opacity duration-700 opacity-10 group-hover:opacity-30 ${danger ? "bg-red-500" : "bg-emerald-500"}`} />
 
             <div className="relative z-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500 dark:text-gray-400 mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
                     {title}
                 </p>
 
                 <h2
-                    className={`text-3xl font-black tracking-tight ${danger ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}
+                    className={`text-3xl font-semibold tracking-tight ${danger ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}
                 >
                     {value}
                 </h2>
@@ -306,14 +380,14 @@ function Card({
                 {extra && (
                     <div className="mt-5 flex items-center gap-3">
                         <span
-                            className={`inline-flex items-center rounded-xl px-3 py-1 text-[10px] font-black tracking-tight ${danger
+                            className={`inline-flex items-center rounded-xl px-3 py-1 text-xs font-semibold tracking-tight ${danger
                                 ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
                                 : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400"
                                 }`}
                         >
                             {extra}
                         </span>
-                        <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest opacity-80">
+                        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider opacity-80">
                             vs last month
                         </span>
                     </div>
@@ -348,18 +422,18 @@ function Product({
                     {icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-black text-gray-900 dark:text-white group-hover:text-emerald-600 transition-colors text-[15px] truncate tracking-tight">
+                    <p className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 transition-colors text-[15px] truncate tracking-tight">
                         {name}
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-tight mt-0.5">{category}</p>
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black mt-1 uppercase tracking-tighter">{sold}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-tight mt-0.5">{category}</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1 uppercase tracking-tighter">{sold}</p>
                 </div>
             </div>
             <div className="text-right">
-                <span className="text-base font-black text-gray-900 dark:text-white block tracking-tighter">
+                <span className="text-base font-medium text-gray-900 dark:text-white block tracking-tighter">
                     {price}
                 </span>
-                <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-black tracking-widest">
+                <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wider">
                     UNIT
                 </span>
             </div>
