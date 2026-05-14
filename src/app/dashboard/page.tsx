@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, LabelList } from "recharts";
 import { motion, Variants } from "framer-motion";
 import Breadcrumb from "@/components/ui/Breadcrumb";
+import Link from "next/link";
 
 const timeframes: Record<string, { name: string; sales: number; orders: number; growth: string }[]> = {
     weekly: [
@@ -148,7 +149,7 @@ export default function DashboardPage() {
                 {/* Sales Overview Chart */}
                 <motion.div
                     variants={itemVariants}
-                    className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-[32px] p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800"
+                    className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-4xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800"
                 >
                     <div className="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
@@ -163,9 +164,9 @@ export default function DashboardPage() {
                                     Revenue Performance Tracking
                                 </p>
                             </div>
-                            
+
                             <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-800" />
-                            
+
                             <div>
                                 <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold mb-0.5">Total Revenue</p>
                                 <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
@@ -229,22 +230,21 @@ export default function DashboardPage() {
                                         if (active && payload && payload.length) {
                                             const data = payload[0].payload;
                                             const isPositive = !data.growth.startsWith('-');
-                                            
+
                                             return (
-                                                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-5 shadow-2xl shadow-emerald-500/10 min-w-[200px]">
+                                                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-5 shadow-2xl shadow-emerald-500/10 min-w-50">
                                                     <div className="flex justify-between items-center mb-3">
                                                         <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
                                                             {label}
                                                         </p>
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                            isPositive 
-                                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' 
-                                                                : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
-                                                        }`}>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isPositive
+                                                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
+                                                            : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
+                                                            }`}>
                                                             {data.growth}
                                                         </span>
                                                     </div>
-                                                    
+
                                                     <div className="space-y-3">
                                                         <div>
                                                             <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold mb-0.5">Revenue</p>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                                                                 ${data.sales.toLocaleString()}
                                                             </p>
                                                         </div>
-                                                        
+
                                                         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
                                                             <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold">Orders</p>
                                                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -297,7 +297,7 @@ export default function DashboardPage() {
                 {/* Popular Products */}
                 <motion.div
                     variants={itemVariants}
-                    className="bg-white dark:bg-gray-900 rounded-[32px] p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col"
+                    className="bg-white dark:bg-gray-900 rounded-4xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col"
                 >
                     <div className="flex items-center justify-between mb-8">
                         <h3 className="font-semibold text-xl text-gray-900 dark:text-white tracking-tight">
@@ -337,9 +337,12 @@ export default function DashboardPage() {
                         />
                     </div>
 
-                    <button className="mt-8 w-full py-4 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-2xl transition-all duration-300 active:scale-[0.98] border border-emerald-500/10">
+                    <Link
+                        href="/dashboard/products"
+                        className="group relative block mt-8 w-full py-4 text-center text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 transition-all duration-300 ease-out hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-emerald-400/40 overflow-hidden"
+                    >
                         View Full Inventory
-                    </button>
+                    </Link>
                 </motion.div>
             </div>
         </div>
@@ -362,7 +365,7 @@ function Card({
         <motion.div
             variants={itemVariants}
             whileHover={{ y: -8, scale: 1.02 }}
-            className="group relative bg-white dark:bg-gray-900 p-7 rounded-[32px] shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5"
+            className="group relative bg-white dark:bg-gray-900 p-7 rounded-4xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5"
         >
             <div className={`absolute -right-10 -top-10 h-36 w-36 rounded-full blur-3xl transition-opacity duration-700 opacity-10 group-hover:opacity-30 ${danger ? "bg-red-500" : "bg-emerald-500"}`} />
 
