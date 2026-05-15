@@ -2,21 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import {
-    ArrowRight,
-    Eye,
-    EyeOff,
-    Lock,
-    Mail,
-    ShieldCheck,
-    Loader2,
-    CheckCircle2
-} from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 // import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
-
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAdminLoginMutation } from "@/redux/features/auth/authApi";
 import { setCredentials } from "@/redux/features/auth/authSlice";
@@ -26,17 +16,13 @@ import toast from "react-hot-toast";
 export default function LoginPage() {
     const router = useRouter();
     const dispatch = useDispatch();
-
     const [loginUser, { isLoading }] = useAdminLoginMutation();
-
     const [showPassword, setShowPassword] = useState(false);
     const [success, setSuccess] = useState(false);
-
     const [form, setForm] = useState({
         email: "",
         password: ""
     });
-
     const [error, setError] = useState("");
 
     // INPUT
@@ -111,21 +97,21 @@ export default function LoginPage() {
         <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-[#eef4ea] dark:bg-[#07130c]">
 
             {/* BACKGROUND */}
-            <div className="absolute -left-32 -top-32 h-[340px] w-[340px] rounded-full bg-emerald-400/20 blur-3xl" />
-            <div className="absolute -bottom-40 -right-40 h-[360px] w-[360px] rounded-full bg-green-300/20 blur-3xl" />
+            <div className="absolute -left-32 -top-32 h-85 w-85 rounded-full bg-emerald-400/20 blur-3xl" />
+            <div className="absolute -bottom-40 -right-40 h-90 w-90 rounded-full bg-green-300/20 blur-3xl" />
 
             {/* CARD */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/40 bg-white/70 shadow-[0_20px_80px_rgba(0,0,0,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1c13]/90 lg:grid-cols-[1.1fr_0.9fr]"
+                className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-4xl border border-white/40 bg-white/70 shadow-[0_20px_80px_rgba(0,0,0,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1c13]/90 lg:grid-cols-[1.1fr_0.9fr]"
             >
 
                 {/* LEFT (UNCHANGED) */}
                 <div className="hidden flex-col p-10 lg:flex xl:p-12">
 
                     <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-500 to-green-600 text-white font-bold">
                             N
                         </div>
 
@@ -156,7 +142,7 @@ export default function LoginPage() {
                             alt="dashboard"
                             width={1200}
                             height={800}
-                            className="h-[280px] w-full object-cover"
+                            className="h-70 w-full object-cover"
                         />
 
                         <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-xl bg-white/90 px-3 py-2 backdrop-blur">
@@ -249,7 +235,7 @@ export default function LoginPage() {
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
                                 disabled={loading || success}
-                                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-700 text-white font-semibold shadow-lg"
+                                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-emerald-600 to-green-700 text-white font-semibold shadow-lg"
                             >
                                 {loading ? (
                                     <Loader2 className="h-5 w-5 animate-spin" />
