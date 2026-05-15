@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { deleteCookie } from "@/lib/cookies";
 
 interface DecodedUser {
     id?: string;
@@ -29,11 +30,30 @@ const authSlice = createSlice({
             state,
             action: PayloadAction<{
                 accessToken: string;
-                user: DecodedUser;
+                user?: DecodedUser | null;
+                id?: string;
+                role?: string;
+                email?: string;
+                iat?: number;
+                exp?: number;
             }>
         ) => {
-            state.accessToken = action.payload.accessToken;
-            state.user = action.payload.user;
+            const { accessToken, user, ...rest } = action.payload;
+            state.accessToken = accessToken;
+            
+            // If user object is provided, use it. Otherwise, use the flat properties.
+            if (user) {
+                state.user = user;
+            } else if (rest.id || rest.role) {
+                state.user = {
+                    id: rest.id,
+                    role: rest.role,
+                    email: rest.email,
+                    iat: rest.iat,
+                    exp: rest.exp,
+                };
+            }
+            
             state.status = "authenticated";
         },
 
@@ -41,6 +61,7 @@ const authSlice = createSlice({
             state.accessToken = null;
             state.user = null;
             state.status = "unauthenticated";
+            deleteCookie("accessToken");
         },
     },
 });

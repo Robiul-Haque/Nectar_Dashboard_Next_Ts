@@ -12,6 +12,7 @@ import { useAdminLoginMutation } from "@/redux/features/auth/authApi";
 import { setCredentials } from "@/redux/features/auth/authSlice";
 import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
+import { setCookie } from "@/lib/cookies";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -75,6 +76,9 @@ export default function LoginPage() {
                     user
                 })
             );
+
+            // set cookie for middleware
+            setCookie("accessToken", token);
 
             setSuccess(true);
 
