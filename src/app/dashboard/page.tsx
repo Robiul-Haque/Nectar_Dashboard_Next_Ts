@@ -6,38 +6,7 @@ import { motion, Variants } from "framer-motion";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import Link from "next/link";
 
-const timeframes: Record<string, { name: string; sales: number; orders: number; growth: string }[]> = {
-    weekly: [
-        { name: "Mon", sales: 420, orders: 12, growth: "+14%" },
-        { name: "Tue", sales: 380, orders: 10, growth: "-5%" },
-        { name: "Wed", sales: 520, orders: 18, growth: "+22%" },
-        { name: "Thu", sales: 750, orders: 24, growth: "+35%" },
-        { name: "Fri", sales: 610, orders: 20, growth: "+18%" },
-        { name: "Sat", sales: 250, orders: 8, growth: "-12%" },
-        { name: "Sun", sales: 400, orders: 14, growth: "+8%" }
-    ],
-    monthly: [
-        { name: "Week 1", sales: 2400, orders: 84, growth: "+10%" },
-        { name: "Week 2", sales: 3100, orders: 112, growth: "+24%" },
-        { name: "Week 3", sales: 1800, orders: 65, growth: "-15%" },
-        { name: "Week 4", sales: 4200, orders: 148, growth: "+42%" }
-    ],
-    "6months": [
-        { name: "Jan", sales: 8400, orders: 312, growth: "+5%" },
-        { name: "Feb", sales: 12100, orders: 425, growth: "+18%" },
-        { name: "Mar", sales: 15800, orders: 560, growth: "+25%" },
-        { name: "Apr", sales: 11200, orders: 390, growth: "-12%" },
-        { name: "May", sales: 14500, orders: 510, growth: "+15%" },
-        { name: "Jun", sales: 18900, orders: 680, growth: "+28%" }
-    ],
-    yearly: [
-        { name: "2021", sales: 121000, orders: 4200, growth: "+12%" },
-        { name: "2022", sales: 158000, orders: 5600, growth: "+25%" },
-        { name: "2023", sales: 112000, orders: 3800, growth: "-18%" },
-        { name: "2024", sales: 145000, orders: 5100, growth: "+15%" },
-        { name: "2025", sales: 168000, orders: 6200, growth: "+20%" }
-    ]
-};
+import { useGetDashboardStatsQuery } from "@/redux/features/dashboard/dashboardApi";
 
 const renderCustomBarLabel = (props: any) => {
     const { x, y, width, value, payload } = props;
@@ -93,17 +62,61 @@ const itemVariants: Variants = {
     }
 };
 
-export default function DashboardPage() {
-    const [selectedTimeframe, setSelectedTimeframe] = useState<keyof typeof timeframes>("weekly");
+function DashboardSkeleton() {
+    return (
+        <div className="w-full max-w-screen-2xl mx-auto space-y-6 mt-6 pb-12 animate-pulse">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800/50">
+                <div>
+                    <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg mb-2"></div>
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                </div>
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+            </div>
 
-    const currentData = timeframes[selectedTimeframe];
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-[168px] bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>)}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2 h-[500px] bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
+                <div className="h-[500px] bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
+            </div>
+        </div>
+    );
+}
+
+export default function DashboardPage() {
+    const [selectedTimeframe, setSelectedTimeframe] = useState<"weekly" | "monthly">("weekly");
+    const { data: statsResponse, isLoading, isError } = useGetDashboardStatsQuery();
+
+    const data = statsResponse?.data;
+
+    const currentData = selectedTimeframe === "weekly" ? data?.salesOverview.weekly.map(d => ({
+        name: d.day,
+        revenue: d.revenue,
+        orders: d.orders,
+    })) || [] : data?.salesOverview.monthly.map(d => ({
+        name: new Date(d.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+        revenue: d.revenue,
+        orders: d.orders,
+    })) || [];
 
     const timeframeOptions = [
         { id: "weekly", label: "Weekly" },
-        { id: "monthly", label: "Monthly" },
-        { id: "6months", label: "6 Months" },
-        { id: "yearly", label: "Yearly" }
+        { id: "monthly", label: "Monthly" }
     ];
+
+    if (isLoading) {
+        return <DashboardSkeleton />;
+    }
+
+    if (isError) {
+        return (
+            <div className="w-full h-[60vh] flex items-center justify-center">
+                <p className="text-red-500 font-semibold">Failed to load dashboard data.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-screen-2xl mx-auto space-y-6 mt-6 pb-12">
@@ -138,10 +151,10 @@ export default function DashboardPage() {
                 animate="show"
                 className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8"
             >
-                <Card title="TOTAL SALES" value="$12,840.50" extra="+12.5%" />
-                <Card title="DAILY ORDERS" value="154" extra="+8.2%" />
-                <Card title="NEW CUSTOMERS" value="42" extra="Stable" />
-                <Card title="OUT OF STOCK" value="12 Items" danger />
+                <Card title="TOTAL SALES" value={`$${data?.cards?.totalSales?.toLocaleString() || '0'}`} />
+                <Card title="DAILY ORDERS" value={`${data?.cards?.dailyOrders?.toLocaleString() || '0'}`} />
+                <Card title="NEW CUSTOMERS" value={`${data?.cards?.newCustomers?.toLocaleString() || '0'}`} />
+                <Card title="OUT OF STOCK" value={`${data?.cards?.outOfStock?.toLocaleString() || '0'} Items`} danger />
             </motion.div>
 
             {/* Main Content Grid */}
@@ -170,7 +183,7 @@ export default function DashboardPage() {
                             <div>
                                 <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold mb-0.5">Total Revenue</p>
                                 <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                                    ${currentData.reduce((acc, item) => acc + item.sales, 0).toLocaleString()}
+                                    ${currentData.reduce((acc, item) => acc + item.revenue, 0).toLocaleString()}
                                 </p>
                             </div>
                         </div>
@@ -180,7 +193,7 @@ export default function DashboardPage() {
                             {timeframeOptions.map((option) => (
                                 <button
                                     key={option.id}
-                                    onClick={() => setSelectedTimeframe(option.id as keyof typeof timeframes)}
+                                    onClick={() => setSelectedTimeframe(option.id as "weekly" | "monthly")}
                                     className={`relative px-5 py-2 text-xs font-semibold transition-all duration-300 rounded-xl ${selectedTimeframe === option.id
                                         ? "text-emerald-700 dark:text-emerald-400"
                                         : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -228,8 +241,7 @@ export default function DashboardPage() {
                                     cursor={{ fill: "rgba(16, 185, 129, 0.03)" }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const data = payload[0].payload;
-                                            const isPositive = !data.growth.startsWith('-');
+                                            const payloadData = payload[0].payload;
 
                                             return (
                                                 <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-5 shadow-2xl shadow-emerald-500/10 min-w-50">
@@ -237,26 +249,20 @@ export default function DashboardPage() {
                                                         <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
                                                             {label}
                                                         </p>
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isPositive
-                                                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
-                                                            : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
-                                                            }`}>
-                                                            {data.growth}
-                                                        </span>
                                                     </div>
 
                                                     <div className="space-y-3">
                                                         <div>
                                                             <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold mb-0.5">Revenue</p>
                                                             <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                                                                ${data.sales.toLocaleString()}
+                                                                ${payloadData.revenue?.toLocaleString() || 0}
                                                             </p>
                                                         </div>
 
                                                         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
                                                             <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold">Orders</p>
                                                             <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                                {data.orders}
+                                                                {payloadData.orders || 0}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -267,14 +273,14 @@ export default function DashboardPage() {
                                     }}
                                 />
                                 <Bar
-                                    dataKey="sales"
+                                    dataKey="revenue"
                                     radius={[12, 12, 0, 0]}
                                     barSize={selectedTimeframe === 'weekly' ? 56 : 42}
                                     animationDuration={1000}
                                     animationEasing="cubic-bezier(0.25, 0.1, 0.25, 1)"
                                 >
                                     <LabelList
-                                        dataKey="sales"
+                                        dataKey="revenue"
                                         content={renderCustomBarLabel}
                                     />
                                     {currentData.map((entry, index) => (
@@ -307,34 +313,22 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="space-y-6 flex-1">
-                        <Product
-                            name="Organic Banana"
-                            category="Fruit & Vegetables"
-                            price="$4.99"
-                            sold="142 sold this week"
-                            icon="🍌"
-                        />
-                        <Product
-                            name="Red Gala Apple"
-                            category="Fruit & Vegetables"
-                            price="$6.50"
-                            sold="98 sold this week"
-                            icon="🍎"
-                        />
-                        <Product
-                            name="Hass Avocado"
-                            category="Fruit & Vegetables"
-                            price="$3.25"
-                            sold="76 sold this week"
-                            icon="🥑"
-                        />
-                        <Product
-                            name="Fresh Broccoli"
-                            category="Vegetables"
-                            price="$2.80"
-                            sold="65 sold this week"
-                            icon="🥦"
-                        />
+                        {data?.popularProducts?.map((product) => (
+                            <Product
+                                key={product.productId}
+                                name={product.name}
+                                category="Product"
+                                price={`$${product.price?.toLocaleString()}`}
+                                sold={`${product.totalSold} sold`}
+                                icon={
+                                    product.image ? (
+                                        <img src={product.image} alt={product.name} className="h-full w-full object-cover rounded-2xl" />
+                                    ) : (
+                                        "📦"
+                                    )
+                                }
+                            />
+                        ))}
                     </div>
 
                     <Link
@@ -412,7 +406,7 @@ function Product({
     category: string;
     price: string;
     sold: string;
-    icon: string;
+    icon: React.ReactNode | string;
 }) {
     return (
         <motion.div
