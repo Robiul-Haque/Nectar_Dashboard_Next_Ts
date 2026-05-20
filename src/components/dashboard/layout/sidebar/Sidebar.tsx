@@ -14,6 +14,7 @@ import {
     HandHelping,
     X,
     AlertTriangle,
+    Award,
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "@/redux/features/auth/authSlice";
@@ -25,6 +26,7 @@ const navItems = [
     { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
     { label: "Products", href: "/dashboard/products", icon: Package },
     { label: "Categories", href: "/dashboard/categories", icon: Tags },
+    { label: "Brands", href: "/dashboard/brands", icon: Award },
     { label: "Customers", href: "/dashboard/customers", icon: Users },
     { label: "Support", href: "/dashboard/support", icon: HandHelping },
 ] as const;

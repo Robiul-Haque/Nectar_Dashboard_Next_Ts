@@ -91,11 +91,11 @@ export default function DashboardPage() {
 
     const data = statsResponse?.data;
 
-    const currentData = selectedTimeframe === "weekly" ? data?.salesOverview.weekly.map(d => ({
+    const currentData = selectedTimeframe === "weekly" ? data?.salesOverview?.weekly?.map(d => ({
         name: d.day,
         revenue: d.revenue,
         orders: d.orders,
-    })) || [] : data?.salesOverview.monthly.map(d => ({
+    })) || [] : data?.salesOverview?.monthly?.map(d => ({
         name: new Date(d.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
         revenue: d.revenue,
         orders: d.orders,
@@ -213,7 +213,8 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="h-80 md:h-96">
-                        <ResponsiveContainer width="100%" height="100%">
+                        {currentData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={currentData} margin={{ top: 40, right: 0, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -297,6 +298,14 @@ export default function DashboardPage() {
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                <svg className="w-12 h-12 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                <p className="font-medium text-sm">No sales data available</p>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 
@@ -313,22 +322,31 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="space-y-6 flex-1">
-                        {data?.popularProducts?.map((product) => (
-                            <Product
-                                key={product.productId}
-                                name={product.name}
-                                category="Product"
-                                price={`$${product.price?.toLocaleString()}`}
-                                sold={`${product.totalSold} sold`}
-                                icon={
-                                    product.image ? (
-                                        <img src={product.image} alt={product.name} className="h-full w-full object-cover rounded-2xl" />
-                                    ) : (
-                                        "📦"
-                                    )
-                                }
-                            />
-                        ))}
+                        {data?.popularProducts?.length ? (
+                            data.popularProducts.map((product) => (
+                                <Product
+                                    key={product.productId}
+                                    name={product.name}
+                                    category="Product"
+                                    price={`$${product.price?.toLocaleString()}`}
+                                    sold={`${product.totalSold} sold`}
+                                    icon={
+                                        product.image ? (
+                                            <img src={product.image} alt={product.name} className="h-full w-full object-cover rounded-2xl" />
+                                        ) : (
+                                            "📦"
+                                        )
+                                    }
+                                />
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-12">
+                                <svg className="w-10 h-10 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                                <p className="font-medium text-sm">No products found</p>
+                            </div>
+                        )}
                     </div>
 
                     <Link
