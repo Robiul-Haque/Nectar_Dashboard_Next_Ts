@@ -74,12 +74,12 @@ function DashboardSkeleton() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-                {[1, 2, 3, 4].map(i => <div key={i} className="h-[168px] bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>)}
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-42 bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>)}
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 h-[500px] bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
-                <div className="h-[500px] bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
+                <div className="xl:col-span-2 h-125 bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
+                <div className="h-125 bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
             </div>
         </div>
     );
