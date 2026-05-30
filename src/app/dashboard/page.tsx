@@ -5,7 +5,6 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid
 import { motion, Variants } from "framer-motion";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import Link from "next/link";
-
 import { useGetDashboardStatsQuery } from "@/redux/features/dashboard/dashboardApi";
 
 const renderCustomBarLabel = (props: any) => {
@@ -64,7 +63,7 @@ const itemVariants: Variants = {
 
 function DashboardSkeleton() {
     return (
-        <div className="w-full max-w-screen-2xl mx-auto space-y-6 mt-6 pb-12 animate-pulse">
+        <div className="w-full max-w-screen-2xl mx-auto space-y-5 animate-pulse">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800/50">
                 <div>
                     <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg mb-2"></div>
@@ -119,7 +118,7 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="w-full max-w-screen-2xl mx-auto space-y-6 mt-6 pb-12">
+        <div className="w-full max-w-screen-2xl mx-auto space-y-5">
             {/* Welcome Header - Compact but Bold */}
             <motion.div
                 variants={pageVariants}
@@ -215,89 +214,89 @@ export default function DashboardPage() {
                     <div className="h-80 md:h-96">
                         {currentData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={currentData} margin={{ top: 40, right: 0, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                                        <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid
-                                    vertical={false}
-                                    strokeDasharray="3 3"
-                                    stroke="#E5E7EB"
-                                    className="dark:stroke-gray-800"
-                                    opacity={0.4}
-                                />
-                                <XAxis
-                                    dataKey="name"
-                                    stroke="#6B7280"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    fontSize={12}
-                                    dy={15}
-                                    fontWeight={700}
-                                />
-                                <Tooltip
-                                    cursor={{ fill: "rgba(16, 185, 129, 0.03)" }}
-                                    content={({ active, payload, label }) => {
-                                        if (active && payload && payload.length) {
-                                            const payloadData = payload[0].payload;
-
-                                            return (
-                                                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-5 shadow-2xl shadow-emerald-500/10 min-w-50">
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
-                                                            {label}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="space-y-3">
-                                                        <div>
-                                                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold mb-0.5">Revenue</p>
-                                                            <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                                                                ${payloadData.revenue?.toLocaleString() || 0}
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
-                                                            <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold">Orders</p>
-                                                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                                {payloadData.orders || 0}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    }}
-                                />
-                                <Bar
-                                    dataKey="revenue"
-                                    radius={[12, 12, 0, 0]}
-                                    barSize={selectedTimeframe === 'weekly' ? 56 : 42}
-                                    animationDuration={1000}
-                                    animationEasing="cubic-bezier(0.25, 0.1, 0.25, 1)"
-                                >
-                                    <LabelList
-                                        dataKey="revenue"
-                                        content={renderCustomBarLabel}
+                                <BarChart data={currentData} margin={{ top: 40, right: 0, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                                            <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid
+                                        vertical={false}
+                                        strokeDasharray="3 3"
+                                        stroke="#E5E7EB"
+                                        className="dark:stroke-gray-800"
+                                        opacity={0.4}
                                     />
-                                    {currentData.map((entry, index) => (
-                                        <Cell
-                                            key={`cell-${index}`}
-                                            fill="url(#barGradient)"
-                                            fillOpacity={index === currentData.length - 1 ? 1 : 0.45}
-                                            style={{
-                                                filter: index === currentData.length - 1 ? 'drop-shadow(0 8px 12px rgba(16, 185, 129, 0.3))' : 'none',
-                                            }}
-                                            className="transition-all duration-500 cursor-pointer"
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke="#6B7280"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        fontSize={12}
+                                        dy={15}
+                                        fontWeight={700}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: "rgba(16, 185, 129, 0.03)" }}
+                                        content={({ active, payload, label }) => {
+                                            if (active && payload && payload.length) {
+                                                const payloadData = payload[0].payload;
+
+                                                return (
+                                                    <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-emerald-500/10 rounded-2xl p-5 shadow-2xl shadow-emerald-500/10 min-w-50">
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                                                                {label}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <div>
+                                                                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold mb-0.5">Revenue</p>
+                                                                <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                                                                    ${payloadData.revenue?.toLocaleString() || 0}
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
+                                                                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-tighter font-semibold">Orders</p>
+                                                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                    {payloadData.orders || 0}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
+                                    />
+                                    <Bar
+                                        dataKey="revenue"
+                                        radius={[12, 12, 0, 0]}
+                                        barSize={selectedTimeframe === 'weekly' ? 56 : 42}
+                                        animationDuration={1000}
+                                        animationEasing="cubic-bezier(0.25, 0.1, 0.25, 1)"
+                                    >
+                                        <LabelList
+                                            dataKey="revenue"
+                                            content={renderCustomBarLabel}
                                         />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                                        {currentData.map((entry, index) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill="url(#barGradient)"
+                                                fillOpacity={index === currentData.length - 1 ? 1 : 0.45}
+                                                style={{
+                                                    filter: index === currentData.length - 1 ? 'drop-shadow(0 8px 12px rgba(16, 185, 129, 0.3))' : 'none',
+                                                }}
+                                                className="transition-all duration-500 cursor-pointer"
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
                                 <svg className="w-12 h-12 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
