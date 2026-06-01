@@ -140,7 +140,7 @@ export default function LoginPage() {
                         Secure admin access for managing your ecosystem.
                     </p>
 
-                    <div className="mt-auto relative overflow-hidden rounded-2xl border bg-white/40 dark:bg-white/5">
+                    <div className="mt-auto relative overflow-hidden rounded-2xl border border-gray-200 bg-white/40 dark:bg-white/5">
                         <Image
                             src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1600&auto=format&fit=crop"
                             alt="dashboard"
@@ -150,8 +150,8 @@ export default function LoginPage() {
                         />
 
                         <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-xl bg-white/90 px-3 py-2 backdrop-blur">
-                            <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                            <span className="text-sm font-medium">
+                            <ShieldCheck className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-medium text-gray-900">
                                 Secure System Active
                             </span>
                         </div>

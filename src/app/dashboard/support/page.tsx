@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search, Phone, Video, MoreVertical, Send, Paperclip, Smile, CheckCheck, FileText } from "lucide-react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 type Contact = {
     id: number;
@@ -249,7 +249,7 @@ export default function SupportChatPage() {
                                 <h3 className="truncate font-semibold text-gray-900 dark:text-white">
                                     {selectedContact.name}
                                 </h3>
-                                <p className="text-sm text-emerald-500">Online now</p>
+                                <p className="text-sm text-green-500">Online now</p>
                             </div>
                         </div>
 

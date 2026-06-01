@@ -17,10 +17,6 @@ export default function CategoryPage() {
                         Product Categories
                     </h1>
                 </div>
-
-                <button className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 transition">
-                    + Create Category
-                </button>
             </div>
 
             {/* STATS */}
