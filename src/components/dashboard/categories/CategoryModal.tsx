@@ -41,10 +41,10 @@ export default function CategoryModal({
     useEffect(() => {
         if (isOpen) {
             if (category) {
-                setName(category.name);
-                setDescription(category.description);
-                setFeatured(category.isFeatured);
-                setSortOrder(category.sortOrder);
+                setName(category.name || "");
+                setDescription(category.description || "");
+                setFeatured(category.isFeatured || false);
+                setSortOrder(category.sortOrder || 0);
                 setPreviewUrl(category.icon?.url || null);
             } else {
                 setName("");
@@ -68,19 +68,19 @@ export default function CategoryModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!name.trim()) {
+        if (!name?.trim()) {
             toast.error("Category name is required");
             return;
         }
 
-        if (!description.trim()) {
+        if (!description?.trim()) {
             toast.error("Description is required");
             return;
         }
 
         const formData = new FormData();
-        formData.append("name", name.trim());
-        formData.append("description", description.trim());
+        formData.append("name", name?.trim() || "");
+        formData.append("description", description?.trim() || "");
         formData.append("featured", featured.toString());
 
         if (file) {

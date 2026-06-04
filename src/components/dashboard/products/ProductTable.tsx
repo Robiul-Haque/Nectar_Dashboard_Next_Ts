@@ -41,14 +41,14 @@ export default function ProductTable({
         let data = [...products];
 
         // 1. Search Query
-        if (search.trim() !== "") {
+        if (search?.trim() !== "") {
             const query = search.toLowerCase();
             data = data.filter(
                 (p) =>
-                    p.name.toLowerCase().includes(query) ||
-                    p.sku.toLowerCase().includes(query) ||
-                    p.category?.name.toLowerCase().includes(query) ||
-                    p.brand?.name.toLowerCase().includes(query)
+                    p.name?.toLowerCase().includes(query) ||
+                    p.sku?.toLowerCase().includes(query) ||
+                    p.category?.name?.toLowerCase().includes(query) ||
+                    p.brand?.name?.toLowerCase().includes(query)
             );
         }
 

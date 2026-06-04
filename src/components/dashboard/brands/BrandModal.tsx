@@ -29,8 +29,8 @@ export default function BrandModal({ isOpen, onClose, brand }: BrandModalProps) 
     useEffect(() => {
         if (isOpen) {
             if (brand) {
-                setName(brand.name);
-                setIsActive(brand.isActive);
+                setName(brand.name || "");
+                setIsActive(brand.isActive ?? true);
                 setPreviewUrl(brand.logo?.url || null);
             } else {
                 setName("");
@@ -52,13 +52,13 @@ export default function BrandModal({ isOpen, onClose, brand }: BrandModalProps) 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!name.trim()) {
+        if (!name?.trim()) {
             toast.error("Brand name is required");
             return;
         }
 
         const formData = new FormData();
-        formData.append("name", name.trim());
+        formData.append("name", name?.trim() || "");
         if (file) {
             formData.append("logo", file);
         }

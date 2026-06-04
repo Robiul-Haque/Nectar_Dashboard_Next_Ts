@@ -1,13 +1,97 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, UploadCloud, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useForm, Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useCreateProductMutation, useUpdateProductMutation } from "@/redux/features/product/productApi";
 import { useGetCategoriesQuery } from "@/redux/features/category/categoryApi";
 import { useGetBrandsQuery } from "@/redux/features/brand/brandApi";
 import { Product } from "@/redux/features/product/productTypes";
 import toast from "react-hot-toast";
+
+// ─── Schemas ────────────────────────────────────────────────────────────────
+
+const baseFields = {
+    name: z.string().min(1, "Product name is required").max(150, "Name too long"),
+    sku: z.string().min(1, "SKU is required").max(50, "SKU too long"),
+    description: z.string().max(2000, "Description too long").optional(),
+    measurementValue: z.coerce.number().min(0, "Value must be positive"),
+    measurementUnit: z.enum(["kg", "g", "pc"]),
+    price: z.coerce.number().min(0, "Price must be positive"),
+    // Use optional number only — empty string handled via UI default as undefined
+    discountPrice: z.coerce
+        .number()
+        .min(0, "Discount price must be positive")
+        .optional()
+        .or(z.literal(undefined)),
+    stock: z.coerce.number().min(0, "Stock must be non-negative"),
+    category: z.string().min(1, "Category is required"),
+    brand: z.string().min(1, "Brand is required"),
+    nutrition: z.string().max(1000, "Nutrition info too long").optional(),
+    isFeatured: z.boolean().default(false),
+    isActive: z.boolean().default(true),
+};
+
+const createSchema = z
+    .object(baseFields)
+    .refine(
+        (data) => {
+            if (data.discountPrice === undefined) return true;
+            return data.discountPrice < data.price;
+        },
+        { message: "Discount price must be less than regular price", path: ["discountPrice"] }
+    );
+
+const updateSchema = z
+    .object({
+        name: baseFields.name.optional(),
+        sku: baseFields.sku.optional(),
+        description: baseFields.description,
+        measurementValue: baseFields.measurementValue.optional(),
+        measurementUnit: baseFields.measurementUnit.optional(),
+        price: baseFields.price.optional(),
+        discountPrice: baseFields.discountPrice,
+        stock: baseFields.stock.optional(),
+        category: z.string().optional(),
+        brand: z.string().optional(),
+        nutrition: baseFields.nutrition,
+        isFeatured: z.boolean().optional(),
+        isActive: z.boolean().optional(),
+    })
+    .refine(
+        (data) => {
+            if (data.discountPrice === undefined || data.price === undefined) return true;
+            return data.discountPrice < data.price;
+        },
+        { message: "Discount price must be less than regular price", path: ["discountPrice"] }
+    );
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type ProductFormData = z.infer<typeof createSchema>;
+
+// ─── Default values ───────────────────────────────────────────────────────────
+
+const FORM_DEFAULTS: ProductFormData = {
+    name: "",
+    sku: "",
+    description: "",
+    measurementValue: 1,
+    measurementUnit: "pc",
+    price: 0,
+    discountPrice: undefined,
+    stock: 0,
+    category: "",
+    brand: "",
+    nutrition: "",
+    isFeatured: false,
+    isActive: true,
+};
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ProductModalProps {
     isOpen: boolean;
@@ -15,194 +99,130 @@ interface ProductModalProps {
     product?: Product | null;
 }
 
-export default function ProductModal({
-    isOpen,
-    onClose,
-    product,
-}: ProductModalProps) {
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     const isEdit = !!product;
 
-    const [name, setName] = useState("");
-    const [sku, setSku] = useState("");
-    const [description, setDescription] = useState("");
-    const [measurementValue, setMeasurementValue] = useState<number>(1);
-    const [measurementUnit, setMeasurementUnit] = useState<"kg" | "g" | "pc">("pc");
-    const [price, setPrice] = useState<number>(0);
-    const [discountPrice, setDiscountPrice] = useState<number | "">("");
-    const [stock, setStock] = useState<number>(0);
-    const [category, setCategory] = useState("");
-    const [brand, setBrand] = useState("");
-    const [nutrition, setNutrition] = useState("");
-    const [isFeatured, setIsFeatured] = useState(false);
-    const [isActive, setIsActive] = useState(true);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch database categories and brands
     const { data: categoriesData } = useGetCategoriesQuery({ limit: 100 });
     const { data: brandsData } = useGetBrandsQuery({ limit: 100 });
-
-    const categories = categoriesData?.data || [];
-    const brands = brandsData?.data || [];
+    const categories = categoriesData?.data ?? [];
+    const brands = brandsData?.data ?? [];
 
     const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
     const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
-
     const isLoading = isCreating || isUpdating;
 
-    useEffect(() => {
-        if (isOpen) {
-            if (product) {
-                setName(product.name);
-                setSku(product.sku);
-                setDescription(product.description || "");
-                setMeasurementValue(product.measurement?.value ?? 1);
-                setMeasurementUnit(product.measurement?.unit ?? "pc");
-                setPrice(product.price);
-                setDiscountPrice(product.discountPrice !== undefined ? product.discountPrice : "");
-                setStock(product.stock);
-                setCategory(product.category?._id || "");
-                setBrand(product.brand?._id || "");
-                setNutrition(product.nutrition || "");
-                setIsFeatured(product.isFeatured ?? false);
-                setIsActive(product.isActive ?? true);
-                setPreviewUrl(product.image?.url || null);
-            } else {
-                setName("");
-                setSku("");
-                setDescription("");
-                setMeasurementValue(1);
-                setMeasurementUnit("pc");
-                setPrice(0);
-                setDiscountPrice("");
-                setStock(0);
-                setCategory(categories[0]?._id || "");
-                setBrand(brands[0]?._id || "");
-                setNutrition("");
-                setIsFeatured(false);
-                setIsActive(true);
-                setPreviewUrl(null);
-            }
-            setFile(null);
-        }
-    }, [isOpen, product, categoriesData, brandsData]);
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors },
+    } = useForm<ProductFormData>({
+        // Cast is safe: updateSchema is a relaxed superset of createSchema.
+        // Both resolve to compatible shapes at runtime; TS just can't infer it.
+        resolver: zodResolver(isEdit ? updateSchema : createSchema) as Resolver<ProductFormData>,
+        defaultValues: FORM_DEFAULTS,
+    });
 
-    // Handle lazy loaded category/brand defaulting
+    // ── Populate form on open ──────────────────────────────────────────────────
+
     useEffect(() => {
-        if (isOpen && !product) {
-            if (!category && categories.length > 0) {
-                setCategory(categories[0]._id);
-            }
-            if (!brand && brands.length > 0) {
-                setBrand(brands[0]._id);
-            }
+        if (!isOpen) return;
+
+        if (product) {
+            reset({
+                name: product.name ?? "",
+                sku: product.sku ?? "",
+                description: product.description ?? "",
+                measurementValue: product.measurement?.value ?? 1,
+                measurementUnit: (product.measurement?.unit as "kg" | "g" | "pc") ?? "pc",
+                price: product.price ?? 0,
+                discountPrice: product.discountPrice ?? undefined,
+                stock: product.stock ?? 0,
+                category: product.category?._id ?? "",
+                brand: product.brand?._id ?? "",
+                nutrition: product.nutrition ?? "",
+                isFeatured: product.isFeatured ?? false,
+                isActive: product.isActive ?? true,
+            });
+            setPreviewUrl(product.image?.url ?? null);
+        } else {
+            reset({
+                ...FORM_DEFAULTS,
+                category: categories[0]?._id ?? "",
+                brand: brands[0]?._id ?? "",
+            });
+            setPreviewUrl(null);
         }
-    }, [categories, brands, isOpen, product, category, brand]);
+
+        setFile(null);
+    }, [isOpen, product, reset, categories, brands]);
+
+    // ── File handling ─────────────────────────────────────────────────────────
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selected = e.target.files?.[0];
-        if (selected) {
-            setFile(selected);
-            setPreviewUrl(URL.createObjectURL(selected));
-        }
+        if (!selected) return;
+        setFile(selected);
+        setPreviewUrl(URL.createObjectURL(selected));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // ── Submit ────────────────────────────────────────────────────────────────
 
-        if (!name.trim()) {
-            toast.error("Product name is required");
-            return;
-        }
-
-        if (!sku.trim()) {
-            toast.error("SKU is required");
-            return;
-        }
-
-        if (!category) {
-            toast.error("Category is required");
-            return;
-        }
-
-        if (!brand) {
-            toast.error("Brand is required");
-            return;
-        }
-
-        if (price < 0) {
-            toast.error("Price cannot be negative");
-            return;
-        }
-
-        if (discountPrice !== "" && Number(discountPrice) >= price) {
-            toast.error("Discount price must be less than regular price");
-            return;
-        }
-
-        if (stock < 0) {
-            toast.error("Stock cannot be negative");
-            return;
-        }
-
-        if (measurementValue < 0) {
-            toast.error("Measurement value cannot be negative");
-            return;
-        }
-
+    const onSubmit = async (data: ProductFormData) => {
         if (!isEdit && !file) {
-            toast.error("Product image is required for creation");
+            toast.error("A product image is required");
             return;
         }
 
         const formData = new FormData();
-        formData.append("name", name.trim());
-        formData.append("sku", sku.trim().toUpperCase());
-        
-        if (description.trim()) {
-            formData.append("description", description.trim());
-        }
-        
-        formData.append("measurement[value]", measurementValue.toString());
-        formData.append("measurement[unit]", measurementUnit);
-        formData.append("price", price.toString());
-        
-        if (discountPrice !== "") {
-            formData.append("discountPrice", discountPrice.toString());
-        }
-        
-        formData.append("stock", stock.toString());
-        formData.append("category", category);
-        formData.append("brand", brand);
-        
-        if (nutrition.trim()) {
-            formData.append("nutrition", nutrition.trim());
-        }
-        
-        formData.append("isFeatured", isFeatured.toString());
-        formData.append("isActive", isActive.toString());
 
-        if (file) {
-            formData.append("image", file);
-        }
+        formData.append("name", data.name.trim());
+        formData.append("sku", data.sku.trim().toUpperCase());
+        if (data.description?.trim()) formData.append("description", data.description.trim());
+        formData.append("measurement[value]", String(data.measurementValue));
+        formData.append("measurement[unit]", data.measurementUnit);
+        formData.append("price", String(data.price));
+        if (data.discountPrice !== undefined) formData.append("discountPrice", String(data.discountPrice));
+        formData.append("stock", String(data.stock));
+        formData.append("category", data.category);
+        formData.append("brand", data.brand);
+        if (data.nutrition?.trim()) formData.append("nutrition", data.nutrition.trim());
+        formData.append("isFeatured", String(data.isFeatured));
+        formData.append("isActive", String(data.isActive));
+        if (file) formData.append("image", file);
 
         try {
             if (isEdit) {
-                await updateProduct({
-                    id: product!._id,
-                    data: formData,
-                }).unwrap();
+                await updateProduct({ id: product!._id, data: formData }).unwrap();
                 toast.success("Product updated successfully");
             } else {
                 await createProduct(formData).unwrap();
                 toast.success("Product created successfully");
             }
             onClose();
-        } catch (error: any) {
-            toast.error(error?.data?.message || "Something went wrong");
+        } catch (error: unknown) {
+            const message =
+                error instanceof Object && "data" in error
+                    ? (error as { data?: { message?: string } }).data?.message
+                    : undefined;
+            toast.error(message ?? "Something went wrong");
         }
     };
+
+    // ── Shared input class helper ─────────────────────────────────────────────
+
+    const inputCls = (hasError: boolean) =>
+        `w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border ${
+            hasError ? "border-red-500" : "border-gray-200 dark:border-gray-700"
+        } rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm disabled:opacity-60`;
+
+    // ─── Render ───────────────────────────────────────────────────────────────
 
     return (
         <AnimatePresence>
@@ -223,11 +243,7 @@ export default function ProductModal({
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{
-                                type: "spring",
-                                bounce: 0,
-                                duration: 0.3,
-                            }}
+                            transition={{ type: "spring", bounce: 0, duration: 0.3 }}
                             className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden pointer-events-auto max-h-[90vh] overflow-y-auto"
                         >
                             {/* Header */}
@@ -237,12 +253,11 @@ export default function ProductModal({
                                         {isEdit ? "Edit Product" : "Create New Product"}
                                     </h2>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {isEdit
-                                            ? "Update product details below."
-                                            : "Add a new product to the catalog."}
+                                        {isEdit ? "Update product details below." : "Add a new product to the catalog."}
                                     </p>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={onClose}
                                     disabled={isLoading}
                                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50"
@@ -251,35 +266,36 @@ export default function ProductModal({
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+
                                 {/* Name & SKU */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Product Name <span className="text-red-500">*</span>
+                                            Product Name {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <input
+                                            {...register("name")}
                                             type="text"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
                                             placeholder="e.g. Organic Heirloom Kale"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            className={inputCls(!!errors.name)}
                                             disabled={isLoading}
                                         />
+                                        {errors.name && <p className="text-[10px] text-red-500">{errors.name.message}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            SKU <span className="text-red-500">*</span>
+                                            SKU {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <input
+                                            {...register("sku")}
                                             type="text"
-                                            value={sku}
-                                            onChange={(e) => setSku(e.target.value)}
                                             placeholder="e.g. LFG-001-KALE"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            className={inputCls(!!errors.sku)}
                                             disabled={isLoading}
                                         />
+                                        {errors.sku && <p className="text-[10px] text-red-500">{errors.sku.message}</p>}
                                     </div>
                                 </div>
 
@@ -287,40 +303,36 @@ export default function ProductModal({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Category <span className="text-red-500">*</span>
+                                            Category {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <select
-                                            value={category}
-                                            onChange={(e) => setCategory(e.target.value)}
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            {...register("category")}
+                                            className={inputCls(!!errors.category)}
                                             disabled={isLoading}
                                         >
                                             <option value="" disabled>Select Category</option>
                                             {categories.map((cat) => (
-                                                <option key={cat._id} value={cat._id}>
-                                                    {cat.name}
-                                                </option>
+                                                <option key={cat._id} value={cat._id}>{cat.name}</option>
                                             ))}
                                         </select>
+                                        {errors.category && <p className="text-[10px] text-red-500">{errors.category.message}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Brand <span className="text-red-500">*</span>
+                                            Brand {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <select
-                                            value={brand}
-                                            onChange={(e) => setBrand(e.target.value)}
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            {...register("brand")}
+                                            className={inputCls(!!errors.brand)}
                                             disabled={isLoading}
                                         >
                                             <option value="" disabled>Select Brand</option>
                                             {brands.map((b) => (
-                                                <option key={b._id} value={b._id}>
-                                                    {b.name}
-                                                </option>
+                                                <option key={b._id} value={b._id}>{b.name}</option>
                                             ))}
                                         </select>
+                                        {errors.brand && <p className="text-[10px] text-red-500">{errors.brand.message}</p>}
                                     </div>
                                 </div>
 
@@ -328,18 +340,18 @@ export default function ProductModal({
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Price ($) <span className="text-red-500">*</span>
+                                            Price ($) {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <input
+                                            {...register("price")}
                                             type="number"
                                             step="0.01"
                                             min="0"
-                                            value={price}
-                                            onChange={(e) => setPrice(Number(e.target.value))}
                                             placeholder="3.49"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            className={inputCls(!!errors.price)}
                                             disabled={isLoading}
                                         />
+                                        {errors.price && <p className="text-[10px] text-red-500">{errors.price.message}</p>}
                                     </div>
 
                                     <div className="space-y-2">
@@ -347,81 +359,81 @@ export default function ProductModal({
                                             Discount Price ($)
                                         </label>
                                         <input
+                                            {...register("discountPrice")}
                                             type="number"
                                             step="0.01"
                                             min="0"
-                                            value={discountPrice}
-                                            onChange={(e) => setDiscountPrice(e.target.value === "" ? "" : Number(e.target.value))}
                                             placeholder="2.99"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            className={inputCls(!!errors.discountPrice)}
                                             disabled={isLoading}
                                         />
+                                        {errors.discountPrice && <p className="text-[10px] text-red-500">{errors.discountPrice.message}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Stock <span className="text-red-500">*</span>
+                                            Stock {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <input
+                                            {...register("stock")}
                                             type="number"
                                             min="0"
-                                            value={stock}
-                                            onChange={(e) => setStock(Number(e.target.value))}
                                             placeholder="42"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            className={inputCls(!!errors.stock)}
                                             disabled={isLoading}
                                         />
+                                        {errors.stock && <p className="text-[10px] text-red-500">{errors.stock.message}</p>}
                                     </div>
                                 </div>
 
-                                {/* Measurement Value & Measurement Unit */}
+                                {/* Measurement */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Measurement Value <span className="text-red-500">*</span>
+                                            Measurement Value {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <input
+                                            {...register("measurementValue")}
                                             type="number"
                                             step="any"
                                             min="0"
-                                            value={measurementValue}
-                                            onChange={(e) => setMeasurementValue(Number(e.target.value))}
                                             placeholder="1"
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            className={inputCls(!!errors.measurementValue)}
                                             disabled={isLoading}
                                         />
+                                        {errors.measurementValue && <p className="text-[10px] text-red-500">{errors.measurementValue.message}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Measurement Unit <span className="text-red-500">*</span>
+                                            Measurement Unit {!isEdit && <span className="text-red-500">*</span>}
                                         </label>
                                         <select
-                                            value={measurementUnit}
-                                            onChange={(e) => setMeasurementUnit(e.target.value as any)}
-                                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                            {...register("measurementUnit")}
+                                            className={inputCls(!!errors.measurementUnit)}
                                             disabled={isLoading}
                                         >
                                             <option value="kg">kg</option>
                                             <option value="g">g</option>
                                             <option value="pc">pc</option>
                                         </select>
+                                        {errors.measurementUnit && <p className="text-[10px] text-red-500">{errors.measurementUnit.message}</p>}
                                     </div>
                                 </div>
 
-                                {/* Nutrition Info */}
+                                {/* Nutrition */}
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                                         Nutrition Info
                                     </label>
                                     <input
+                                        {...register("nutrition")}
                                         type="text"
-                                        value={nutrition}
-                                        onChange={(e) => setNutrition(e.target.value)}
                                         placeholder="e.g. Calories: 120, Protein: 2g"
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                                        className={inputCls(!!errors.nutrition)}
                                         disabled={isLoading}
                                     />
+                                    {errors.nutrition && <p className="text-[10px] text-red-500">{errors.nutrition.message}</p>}
                                 </div>
 
                                 {/* Description */}
@@ -430,13 +442,13 @@ export default function ProductModal({
                                         Description
                                     </label>
                                     <textarea
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
+                                        {...register("description")}
                                         placeholder="Organic farm fresh greens..."
                                         rows={3}
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm resize-none"
+                                        className={`${inputCls(!!errors.description)} resize-none`}
                                         disabled={isLoading}
                                     />
+                                    {errors.description && <p className="text-[10px] text-red-500">{errors.description.message}</p>}
                                 </div>
 
                                 {/* Image Upload */}
@@ -460,15 +472,10 @@ export default function ProductModal({
                                             className="hidden"
                                             disabled={isLoading}
                                         />
-
                                         {previewUrl ? (
                                             <div className="flex flex-col items-center space-y-3">
                                                 <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
-                                                    <img
-                                                        src={previewUrl}
-                                                        alt="Preview"
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                                 </div>
                                                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                                     Click to change image
@@ -492,54 +499,36 @@ export default function ProductModal({
                                     </div>
                                 </div>
 
-                                {/* Active & Featured Toggles */}
+                                {/* Toggles */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Active Status */}
-                                    <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-800">
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-900 dark:text-white">
-                                                Active Status
-                                            </p>
-                                            <p className="text-[10px] text-gray-500">
-                                                Visible in shop.
-                                            </p>
+                                    {(
+                                        [
+                                            { field: "isActive", label: "Active Status", sub: "Visible in shop." },
+                                            { field: "isFeatured", label: "Featured Product", sub: "Highlight in app." },
+                                        ] as const
+                                    ).map(({ field, label, sub }) => (
+                                        <div
+                                            key={field}
+                                            className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-800"
+                                        >
+                                            <div>
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white">{label}</p>
+                                                <p className="text-[10px] text-gray-500">{sub}</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    {...register(field)}
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    disabled={isLoading}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600" />
+                                            </label>
                                         </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={isActive}
-                                                onChange={(e) => setIsActive(e.target.checked)}
-                                                disabled={isLoading}
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                                        </label>
-                                    </div>
-
-                                    {/* Featured Status */}
-                                    <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-800">
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-900 dark:text-white">
-                                                Featured Product
-                                            </p>
-                                            <p className="text-[10px] text-gray-500">
-                                                Highlight in app.
-                                            </p>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={isFeatured}
-                                                onChange={(e) => setIsFeatured(e.target.checked)}
-                                                disabled={isLoading}
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                                        </label>
-                                    </div>
+                                    ))}
                                 </div>
 
-                                {/* Action Buttons */}
+                                {/* Actions */}
                                 <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
                                     <button
                                         type="button"
@@ -557,12 +546,10 @@ export default function ProductModal({
                                         {isLoading ? (
                                             <>
                                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                                Saving...
+                                                <span>{isEdit ? "Updating..." : "Creating..."}</span>
                                             </>
-                                        ) : isEdit ? (
-                                            "Update Product"
                                         ) : (
-                                            "Create Product"
+                                            <span>{isEdit ? "Update Product" : "Create Product"}</span>
                                         )}
                                     </button>
                                 </div>
