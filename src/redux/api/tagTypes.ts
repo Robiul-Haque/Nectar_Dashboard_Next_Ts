@@ -4,6 +4,7 @@ export const tagTypes = {
     CATEGORY: "CATEGORY",
     BRAND: "BRAND",
     DASHBOARD: "DASHBOARD",
+    ORDER: "ORDER",
 } as const;
 
 export const tagTypesList = Object.values(tagTypes);
