@@ -4,22 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-    LayoutDashboard,
-    ShoppingCart,
-    Package,
-    Tags,
-    Users,
-    LogOut,
-    HandHelping,
-    X,
-    AlertTriangle,
-    Award,
-} from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Tags, Users, LogOut, HandHelping, X, AlertTriangle, Award } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "@/redux/features/auth/authSlice";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { deleteCookie } from "@/lib/cookies";
+import { logoutAction } from "@/app/actions/auth";
 
 const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -42,11 +32,7 @@ interface LogoutModalProps {
     onConfirm: () => void;
 }
 
-function LogoutModal({
-    isOpen,
-    onClose,
-    onConfirm,
-}: LogoutModalProps) {
+function LogoutModal({ isOpen, onClose, onConfirm, }: LogoutModalProps) {
     return (
         <AnimatePresence>
             {isOpen && (
@@ -136,20 +122,44 @@ function LogoutModal({
     );
 }
 
-export default function Sidebar({
-    isOpen,
-    setIsOpen,
-}: SidebarProps) {
+export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
     const pathname = usePathname();
     const dispatch = useDispatch();
-    const router = useRouter();
     const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
-    const handleLogout = () => {
-        dispatch(logout());
+    const handleLogout = async () => {
+        // 1. UI Feedback
         setLogoutModalOpen(false);
-        toast.success("Logged out successfully");
-        router.push("/login");
+        const loadingToast = toast.loading("Logging out...");
+
+        try {
+            // 2. Clear state in Redux
+            dispatch(logout());
+
+            // 3. Client-side cookie deletion (best effort)
+            deleteCookie("accessToken");
+
+            // 4. Dismiss loading toast BEFORE calling server action
+            // because logoutAction() will redirect and stop execution here
+            toast.dismiss(loadingToast);
+
+            // 5. Trigger Server Action for reliable cookie deletion and redirect
+            await logoutAction();
+
+        } catch (error: any) {
+            // Next.js redirect() actually throws a special error that we should NOT catch
+            // but if it's a real error, we handle it here.
+            if (error?.digest?.includes('NEXT_REDIRECT')) {
+                throw error;
+            }
+
+            console.error("Logout failed:", error);
+            toast.dismiss(loadingToast);
+            toast.error("Logout failed. Falling back to hard redirect.");
+
+            // Final fallback
+            window.location.href = "/login";
+        }
     };
 
     return (

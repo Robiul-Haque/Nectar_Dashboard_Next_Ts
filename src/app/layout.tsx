@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitializerScript }} />
       </head>
-      <body className="antialiased bg-gray-50 dark:bg-gray-950">
+      <body className="antialiased bg-gray-50 dark:bg-gray-950" suppressHydrationWarning>
         <ReduxProvider>
           <ThemeProvider>
             {children}

@@ -11,5 +11,6 @@ export const getCookie = (name: string) => {
 };
 
 export const deleteCookie = (name: string) => {
+    // Standard cookie deletion for client-side cookies
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
 };

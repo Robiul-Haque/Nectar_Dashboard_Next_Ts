@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Pencil, Trash2, Search, Plus } from "lucide-react";
+import { Pencil, Trash2, Search, Plus, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { Product } from "@/redux/features/product/productTypes";
 
@@ -10,6 +10,7 @@ interface ProductTableProps {
     products: Product[];
     onEdit: (product: Product) => void;
     onDelete: (product: Product) => void;
+    onViewReviews: (product: Product) => void;
     onAddClick: () => void;
     isLoading?: boolean;
 }
@@ -28,6 +29,7 @@ export default function ProductTable({
     products,
     onEdit,
     onDelete,
+    onViewReviews,
     onAddClick,
     isLoading = false,
 }: ProductTableProps) {
@@ -87,6 +89,11 @@ export default function ProductTable({
 
     const startItem = filtered.length > 0 ? (page - 1) * limit + 1 : 0;
     const endItem = Math.min(page * limit, filtered.length);
+
+    const cleanImageUrl = (url: string) => {
+        if (!url) return "";
+        return url.trim().replace(/`/g, "");
+    };
 
     return (
         <div className="space-y-6">
@@ -210,13 +217,14 @@ export default function ProductTable({
                                         <td className="p-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 shadow-sm flex-shrink-0">
-                                                    {product.image?.url ? (
-                                                        <img
-                                                            src={product.image.url}
-                                                            alt={product.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
+                                                {product.image?.url ? (
+                                                    <Image
+                                                        src={cleanImageUrl(product.image.url)}
+                                                        alt={product.name}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
                                                         <div className="w-full h-full flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold text-lg">
                                                             {product.name.charAt(0)}
                                                         </div>
@@ -321,16 +329,35 @@ export default function ProductTable({
                                         <td className="p-5">
                                             <div className="flex justify-end gap-2">
                                                 <button
-                                                    onClick={() => onEdit(product)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onViewReviews(product);
+                                                    }}
+                                                    className="p-2 rounded-xl text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-all active:scale-95 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs"
+                                                    title="View Reviews"
+                                                    aria-label="View Reviews"
+                                                >
+                                                    <Star className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onEdit(product);
+                                                    }}
                                                     className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all active:scale-95 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs"
                                                     title="Edit Product"
+                                                    aria-label="Edit Product"
                                                 >
                                                     <Pencil className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() => onDelete(product)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onDelete(product);
+                                                    }}
                                                     className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-95 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs"
                                                     title="Delete Product"
+                                                    aria-label="Delete Product"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>

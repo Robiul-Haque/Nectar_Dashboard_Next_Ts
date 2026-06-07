@@ -5,6 +5,7 @@ import ProductStats from "@/components/dashboard/products/ProductStats";
 import ProductTable from "@/components/dashboard/products/ProductTable";
 import ProductModal from "@/components/dashboard/products/ProductModal";
 import DeleteProductModal from "@/components/dashboard/products/DeleteProductModal";
+import ProductReviewModal from "@/components/dashboard/products/reviews/ProductReviewModal";
 import { useGetProductsQuery } from "@/redux/features/product/productApi";
 import { Product } from "@/redux/features/product/productTypes";
 
@@ -16,6 +17,7 @@ export default function ProductsPage() {
     // Modal states
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     const handleEdit = (product: Product) => {
@@ -26,6 +28,11 @@ export default function ProductsPage() {
     const handleDeleteClick = (product: Product) => {
         setSelectedProduct(product);
         setIsDeleteModalOpen(true);
+    };
+
+    const handleViewReviews = (product: Product) => {
+        setSelectedProduct(product);
+        setIsReviewModalOpen(true);
     };
 
     const handleAddClick = () => {
@@ -55,6 +62,7 @@ export default function ProductsPage() {
                 products={products}
                 onEdit={handleEdit}
                 onDelete={handleDeleteClick}
+                onViewReviews={handleViewReviews}
                 onAddClick={handleAddClick}
                 isLoading={isLoading || isFetching}
             />
@@ -69,6 +77,12 @@ export default function ProductsPage() {
             <DeleteProductModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
+                product={selectedProduct}
+            />
+
+            <ProductReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
                 product={selectedProduct}
             />
         </section>

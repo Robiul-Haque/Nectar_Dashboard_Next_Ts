@@ -61,10 +61,13 @@ const authSlice = createSlice({
             state.accessToken = null;
             state.user = null;
             state.status = "unauthenticated";
-            deleteCookie("accessToken");
         },
     },
 });
 
 export const { setCredentials, logout } = authSlice.actions;
+
+export const selectCurrentUser = (state: { auth: AuthState }) => state.auth.user;
+export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.status === "authenticated";
+
 export default authSlice.reducer;

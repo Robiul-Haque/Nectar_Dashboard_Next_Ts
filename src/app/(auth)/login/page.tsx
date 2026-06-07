@@ -81,13 +81,11 @@ export default function LoginPage() {
             setCookie("accessToken", token);
 
             setSuccess(true);
-
             toast.success("Login successful");
 
-            // redirect
-            setTimeout(() => {
-                router.push("/dashboard");
-            }, 1200);
+            // Instant navigation instead of delayed setTimeout
+            router.push("/dashboard");
+            router.refresh(); // Force Next.js to re-evaluate middleware immediately
 
         } catch (err: any) {
             setError(err?.data?.message || "Login failed");
