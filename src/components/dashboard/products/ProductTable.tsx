@@ -163,6 +163,12 @@ export default function ProductTable({
                                 <th className="p-5 text-left font-semibold uppercase tracking-wider text-xs">
                                     Price
                                 </th>
+                                <th className="p-5 text-center font-semibold uppercase tracking-wider text-xs">
+                                    Rating
+                                </th>
+                                <th className="p-5 text-center font-semibold uppercase tracking-wider text-xs">
+                                    Reviews
+                                </th>
                                 <th className="p-5 text-left font-semibold uppercase tracking-wider text-xs">
                                     Status
                                 </th>
@@ -195,6 +201,12 @@ export default function ProductTable({
                                         </td>
                                         <td className="p-5">
                                             <div className="h-5 w-14 bg-gray-200 dark:bg-gray-800 rounded-lg" />
+                                        </td>
+                                        <td className="p-5">
+                                            <div className="h-5 w-12 bg-gray-200 dark:bg-gray-800 rounded-lg mx-auto" />
+                                        </td>
+                                        <td className="p-5">
+                                            <div className="h-5 w-10 bg-gray-200 dark:bg-gray-800 rounded-lg mx-auto" />
                                         </td>
                                         <td className="p-5">
                                             <div className="h-6 w-16 bg-gray-200 dark:bg-gray-800 rounded-full" />
@@ -312,6 +324,23 @@ export default function ProductTable({
                                             )}
                                         </td>
 
+                                        {/* RATING */}
+                                        <td className="p-5 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                                <span className="font-semibold text-gray-900 dark:text-white">
+                                                    {product.averageRating?.toFixed(1) ?? "0.0"}
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        {/* REVIEWS */}
+                                        <td className="p-5 text-center">
+                                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                                                {product.totalReviews ?? 0}
+                                            </span>
+                                        </td>
+
                                         {/* STATUS */}
                                         <td className="p-5">
                                             <span
@@ -367,7 +396,7 @@ export default function ProductTable({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="py-24 text-center">
+                                    <td colSpan={8} className="py-24 text-center">
                                         <div className="flex flex-col items-center justify-center text-gray-400">
                                             <div className="w-16 h-16 mb-4 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                                                 <Search className="w-8 h-8 opacity-50" />

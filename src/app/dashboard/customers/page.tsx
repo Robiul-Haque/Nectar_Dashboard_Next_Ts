@@ -1,154 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Filter, Download, ChevronLeft, ChevronRight, MoreHorizontal, Mail, ShoppingBag, Users, DollarSign, Package } from "lucide-react";
+import { Search, Filter, Download, ChevronLeft, ChevronRight, Mail, MapPin, ShieldCheck, ShieldAlert, UserCheck, UserX, Calendar, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGetUsersQuery } from "@/redux/features/user/userApi";
+import Image from "next/image";
 
-type CustomerStatus = "Active" | "Blocked" | "Pending";
-type OrderStatus = "Delivered" | "Processing" | "Shipped" | "Cancelled";
-
-interface Customer {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    avatar: string;
-    status: CustomerStatus;
-    totalOrders: number;
-    currentOrders: number;
-    totalSpent: number;
-    joinedAt: string;
-    lastOrder: string;
-    orderStatus: OrderStatus;
-}
-
-const customers: Customer[] = [
-    {
-        id: "CST-9281",
-        name: "Eleanor Shellstrop",
-        email: "eleanor@shrimp.com",
-        phone: "+1 (555) 012-3456",
-        avatar: "https://i.pravatar.cc/100?img=32",
-        status: "Active",
-        totalOrders: 24,
-        currentOrders: 2,
-        totalSpent: 4250,
-        joinedAt: "2023-10-12",
-        lastOrder: "2026-04-20",
-        orderStatus: "Delivered",
-    },
-    {
-        id: "CST-4421",
-        name: "Chidi Anagonye",
-        email: "chidi@ethics.edu",
-        phone: "+1 (555) 987-6543",
-        avatar: "https://i.pravatar.cc/100?img=12",
-        status: "Active",
-        totalOrders: 12,
-        currentOrders: 1,
-        totalSpent: 2180,
-        joinedAt: "2023-11-04",
-        lastOrder: "2026-04-19",
-        orderStatus: "Processing",
-    },
-    {
-        id: "CST-7761",
-        name: "Tahani Al-Jamil",
-        email: "tahani@gmail.com",
-        phone: "+1 (555) 301-0987",
-        avatar: "https://i.pravatar.cc/100?img=47",
-        status: "Blocked",
-        totalOrders: 48,
-        currentOrders: 0,
-        totalSpent: 9320,
-        joinedAt: "2023-12-20",
-        lastOrder: "2026-04-14",
-        orderStatus: "Cancelled",
-    },
-    {
-        id: "CST-6672",
-        name: "Jason Mendoza",
-        email: "jason@duval.com",
-        phone: "+1 (555) 443-2211",
-        avatar: "https://i.pravatar.cc/100?img=15",
-        status: "Pending",
-        totalOrders: 6,
-        currentOrders: 1,
-        totalSpent: 860,
-        joinedAt: "2024-01-05",
-        lastOrder: "2026-04-21",
-        orderStatus: "Shipped",
-    },
-    {
-        id: "CST-0001",
-        name: "Janet NotAGirl",
-        email: "janet@knowledge.ai",
-        phone: "+1 (555) 000-0000",
-        avatar: "https://i.pravatar.cc/100?img=5",
-        status: "Active",
-        totalOrders: 99,
-        currentOrders: 4,
-        totalSpent: 18450,
-        joinedAt: "2023-08-01",
-        lastOrder: "2026-04-22",
-        orderStatus: "Processing",
-    },
-    {
-        id: "CST-1102",
-        name: "Michael Architect",
-        email: "michael@neighborhood.io",
-        phone: "+1 (555) 654-7788",
-        avatar: "https://i.pravatar.cc/100?img=22",
-        status: "Active",
-        totalOrders: 31,
-        currentOrders: 3,
-        totalSpent: 6450,
-        joinedAt: "2024-02-15",
-        lastOrder: "2026-04-23",
-        orderStatus: "Delivered",
-    },
-    {
-        id: "CST-8843",
-        name: "Vicky Larson",
-        email: "vicky@store.com",
-        phone: "+1 (555) 741-9632",
-        avatar: "https://i.pravatar.cc/100?img=41",
-        status: "Blocked",
-        totalOrders: 17,
-        currentOrders: 0,
-        totalSpent: 1910,
-        joinedAt: "2024-03-12",
-        lastOrder: "2026-04-11",
-        orderStatus: "Cancelled",
-    },
-    {
-        id: "CST-2044",
-        name: "Sarah Parker",
-        email: "sarah@company.com",
-        phone: "+1 (555) 321-6549",
-        avatar: "https://i.pravatar.cc/100?img=25",
-        status: "Active",
-        totalOrders: 54,
-        currentOrders: 5,
-        totalSpent: 12120,
-        joinedAt: "2023-09-28",
-        lastOrder: "2026-04-24",
-        orderStatus: "Shipped",
-    },
-];
-
-
-const statusStyles: Record<CustomerStatus, string> = {
-    Active: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
-    Blocked: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
-    Pending: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
+const statusStyles = {
+    active: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
+    inactive: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
 };
 
-const orderStyles: Record<OrderStatus, string> = {
-    Delivered: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
-    Processing: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
-    Shipped: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400",
-    Cancelled: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+const verifyStyles = {
+    verified: "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20",
+    unverified: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
 };
 
 function StatCard({ title, value, icon: Icon, subtitle }: { title: string; value: string; subtitle: string; icon: any; }) {
@@ -179,62 +44,35 @@ function StatCard({ title, value, icon: Icon, subtitle }: { title: string; value
     );
 }
 
-function StatusBadge({ status }: { status: CustomerStatus }) {
-    return (
-        <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[status]}`}
-        >
-            {status}
-        </span>
-    );
-}
-
-function OrderBadge({ status }: { status: OrderStatus }) {
-    return (
-        <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${orderStyles[status]}`}
-        >
-            {status}
-        </span>
-    );
-}
-
 export default function CustomersPage() {
     const [search, setSearch] = useState("");
-    const [status, setStatus] = useState("All");
+    const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
     const [page, setPage] = useState(1);
+    const limit = 10;
 
-    const perPage = 5;
+    const { data: usersData, isLoading, isFetching } = useGetUsersQuery({
+        search,
+        isActive: isActiveFilter === "all" ? undefined : isActiveFilter === "active",
+        page,
+        limit,
+    });
 
-    const filteredCustomers = useMemo(() => {
-        return customers.filter((customer) => {
-            const matchesSearch =
-                customer.name.toLowerCase().includes(search.toLowerCase()) ||
-                customer.email.toLowerCase().includes(search.toLowerCase()) ||
-                customer.id.toLowerCase().includes(search.toLowerCase());
+    const users = usersData?.data || [];
+    const pagination = usersData?.pagination;
+    const totalPages = pagination?.totalPages || 0;
 
-            const matchesStatus =
-                status === "All" || customer.status === status;
+    const cleanImageUrl = (url: string) => {
+        if (!url) return "";
+        return url.trim().replace(/`/g, "");
+    };
 
-            return matchesSearch && matchesStatus;
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
         });
-    }, [search, status]);
-
-    const totalPages = Math.ceil(filteredCustomers.length / perPage);
-
-    const paginatedCustomers = filteredCustomers.slice(
-        (page - 1) * perPage,
-        page * perPage
-    );
-
-    const activeCustomers = customers.filter(
-        (c) => c.status === "Active"
-    ).length;
-
-    const totalRevenue = customers.reduce(
-        (sum, c) => sum + c.totalSpent,
-        0
-    );
+    };
 
     return (
         <div className="space-y-8">
@@ -245,7 +83,7 @@ export default function CustomersPage() {
                         Customers
                     </h1>
                     <p className="mt-1 text-gray-500 dark:text-gray-400">
-                        Manage your customers, orders, and relationships.
+                        Manage your customers and their account statuses.
                     </p>
                 </div>
 
@@ -256,32 +94,28 @@ export default function CustomersPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 <StatCard
                     title="Total Customers"
-                    value={customers.length.toString()}
-                    subtitle="Across all segments"
+                    value={pagination?.total?.toString() || "0"}
+                    subtitle="Registered users"
                     icon={Users}
                 />
                 <StatCard
-                    title="Active Customers"
-                    value={activeCustomers.toString()}
-                    subtitle="Currently engaged"
-                    icon={Mail}
+                    title="Active Users"
+                    value={users.filter(u => u.isActive).length.toString()}
+                    subtitle="Currently active"
+                    icon={UserCheck}
                 />
                 <StatCard
-                    title="Total Revenue"
-                    value={`$${totalRevenue.toLocaleString()}`}
-                    subtitle="Lifetime customer value"
-                    icon={DollarSign}
-                />
-                <StatCard
-                    title="Open Orders"
-                    value={customers
-                        .reduce((sum, c) => sum + c.currentOrders, 0)
-                        .toString()}
-                    subtitle="Pending fulfillment"
-                    icon={Package}
+                    title="New Joinees"
+                    value={users.filter(u => {
+                        const date = new Date(u.createdAt);
+                        const now = new Date();
+                        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+                    }).length.toString()}
+                    subtitle="This month"
+                    icon={Calendar}
                 />
             </div>
 
@@ -289,7 +123,7 @@ export default function CustomersPage() {
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                className="rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden"
             >
                 {/* Filters */}
                 <div className="border-b border-gray-100 p-6 dark:border-gray-800">
@@ -298,7 +132,7 @@ export default function CustomersPage() {
                             <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search customers..."
+                                placeholder="Search by name or email..."
                                 value={search}
                                 onChange={(e) => {
                                     setSearch(e.target.value);
@@ -312,17 +146,16 @@ export default function CustomersPage() {
                             <div className="relative">
                                 <Filter className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                 <select
-                                    value={status}
+                                    value={isActiveFilter}
                                     onChange={(e) => {
-                                        setStatus(e.target.value);
+                                        setIsActiveFilter(e.target.value);
                                         setPage(1);
                                     }}
-                                    className="h-12 rounded-2xl border border-gray-200 bg-white pl-11 pr-10 text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                    className="h-12 rounded-2xl border border-gray-200 bg-white pl-11 pr-10 text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white appearance-none cursor-pointer"
                                 >
-                                    <option>All</option>
-                                    <option>Active</option>
-                                    <option>Pending</option>
-                                    <option>Blocked</option>
+                                    <option value="all">All Status</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
                                 </select>
                             </div>
                         </div>
@@ -337,12 +170,11 @@ export default function CustomersPage() {
                                 {[
                                     "Customer",
                                     "Contact",
-                                    "Joining Date",
-                                    "Total Orders",
-                                    "Current Orders",
-                                    "Order Status",
+                                    "Location",
+                                    "Role",
+                                    "Verification",
+                                    "Joined Date",
                                     "Status",
-                                    "Actions",
                                 ].map((heading) => (
                                     <th
                                         key={heading}
@@ -354,197 +186,267 @@ export default function CustomersPage() {
                             </tr>
                         </thead>
 
-                        <tbody>
-                            <AnimatePresence mode="wait">
-                                {paginatedCustomers.map((customer, index) => (
-                                    <motion.tr
-                                        key={customer.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ delay: index * 0.04 }}
-                                        className="border-b border-gray-100 transition-colors hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
-                                    >
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {isLoading || isFetching ? (
+                                Array.from({ length: limit }).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
-                                                <img
-                                                    src={customer.avatar}
-                                                    alt={customer.name}
-                                                    className="h-12 w-12 rounded-2xl object-cover ring-2 ring-gray-100 dark:ring-gray-700"
-                                                />
-                                                <div>
-                                                    <p className="font-semibold text-gray-900 dark:text-white">
-                                                        {customer.name}
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">
-                                                        ID: {customer.id}
-                                                    </p>
+                                                <div className="h-12 w-12 rounded-2xl bg-gray-200 dark:bg-gray-800" />
+                                                <div className="space-y-2">
+                                                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded" />
+                                                    <div className="h-3 w-16 bg-gray-200 dark:bg-gray-800 rounded" />
                                                 </div>
                                             </div>
                                         </td>
+                                        <td className="px-6 py-5"><div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded" /></td>
+                                        <td className="px-6 py-5"><div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded" /></td>
+                                        <td className="px-6 py-5"><div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded" /></td>
+                                        <td className="px-6 py-5"><div className="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded-full" /></td>
+                                        <td className="px-6 py-5"><div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded" /></td>
+                                        <td className="px-6 py-5"><div className="h-6 w-16 bg-gray-200 dark:bg-gray-800 rounded-full" /></td>
+                                    </tr>
+                                ))
+                            ) : users.length > 0 ? (
+                                <AnimatePresence mode="wait">
+                                    {users.map((user, index) => (
+                                        <motion.tr
+                                            key={user._id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ delay: index * 0.02 }}
+                                            className="transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-800/40"
+                                        >
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative h-12 w-12 flex-shrink-0">
+                                                        {user.avatar?.url ? (
+                                                            <Image
+                                                                src={cleanImageUrl(user.avatar.url)}
+                                                                alt={user.name}
+                                                                fill
+                                                                className="rounded-2xl object-cover ring-2 ring-gray-100 dark:ring-gray-700"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex h-full w-full items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold text-lg">
+                                                                {user.name.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold text-gray-900 dark:text-white truncate">
+                                                            {user.name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 font-mono truncate">
+                                                            ID: {user._id.slice(-8).toUpperCase()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
 
-                                        <td className="px-6 py-5">
-                                            <p className="font-medium text-gray-900 dark:text-white">
-                                                {customer.email}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                                {customer.phone}
-                                            </p>
-                                        </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-2 text-gray-900 dark:text-white">
+                                                    <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                                    <span className="text-sm font-medium">{user.email}</span>
+                                                </div>
+                                            </td>
 
-                                        <td className="px-6 py-5 text-gray-700 dark:text-gray-300">
-                                            {new Date(customer.joinedAt).toLocaleDateString()}
-                                        </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                                    <MapPin className="h-3.5 w-3.5" />
+                                                    <span className="text-sm">
+                                                        {user.location?.city || user.location?.country 
+                                                            ? `${user.location.city}${user.location.city && user.location.country ? ", " : ""}${user.location.country}`
+                                                            : "N/A"}
+                                                    </span>
+                                                </div>
+                                            </td>
 
-                                        <td className="px-6 py-5">
-                                            <span className="font-semibold text-gray-900 dark:text-white">
-                                                {customer.totalOrders}
-                                            </span>
-                                        </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+                                                    {user.role}
+                                                </span>
+                                            </td>
 
-                                        <td className="px-6 py-5">
-                                            <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                                                {customer.currentOrders}
-                                            </span>
-                                        </td>
+                                            <td className="px-6 py-5">
+                                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.isVerified ? verifyStyles.verified : verifyStyles.unverified}`}>
+                                                    {user.isVerified ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
+                                                    {user.isVerified ? "Verified" : "Unverified"}
+                                                </span>
+                                            </td>
 
-                                        <td className="px-6 py-5">
-                                            <OrderBadge status={customer.orderStatus} />
-                                        </td>
+                                            <td className="px-6 py-5 text-sm text-gray-700 dark:text-gray-300">
+                                                {formatDate(user.createdAt)}
+                                            </td>
 
-                                        <td className="px-6 py-5">
-                                            <StatusBadge status={customer.status} />
-                                        </td>
-
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-2">
-                                                <button className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-emerald-500/10">
-                                                    <Mail className="h-4 w-4" />
-                                                </button>
-                                                <button className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-blue-500/10">
-                                                    <ShoppingBag className="h-4 w-4" />
-                                                </button>
-                                                <button className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </AnimatePresence>
+                                            <td className="px-6 py-5">
+                                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.isActive ? statusStyles.active : statusStyles.inactive}`}>
+                                                    {user.isActive ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+                                                    {user.isActive ? "Active" : "Inactive"}
+                                                </span>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </AnimatePresence>
+                            ) : (
+                                <tr>
+                                    <td colSpan={7} className="py-24 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400">
+                                            <Search className="h-12 w-12 mb-4 opacity-20" />
+                                            <p className="text-lg font-medium text-gray-900 dark:text-white">No customers found</p>
+                                            <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
                 {/* Mobile Cards */}
                 <div className="space-y-4 p-4 lg:hidden">
-                    {paginatedCustomers.map((customer) => (
-                        <motion.div
-                            key={customer.id}
-                            whileHover={{ y: -2 }}
-                            className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800"
-                        >
-                            <div className="flex items-start gap-4">
-                                <img
-                                    src={customer.avatar}
-                                    alt={customer.name}
-                                    className="h-14 w-14 rounded-2xl object-cover"
-                                />
-
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900 dark:text-white">
-                                                {customer.name}
-                                            </h3>
-                                            <p className="truncate text-sm text-gray-500">
-                                                {customer.email}
-                                            </p>
-                                        </div>
-                                        <StatusBadge status={customer.status} />
-                                    </div>
-
-                                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                        <div>
-                                            <p className="text-gray-500">Orders</p>
-                                            <p className="font-semibold text-gray-900 dark:text-white">
-                                                {customer.totalOrders}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500">Open</p>
-                                            <p className="font-semibold text-gray-900 dark:text-white">
-                                                {customer.currentOrders}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500">Joined</p>
-                                            <p className="font-semibold text-gray-900 dark:text-white">
-                                                {new Date(customer.joinedAt).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500">Status</p>
-                                            <OrderBadge status={customer.orderStatus} />
-                                        </div>
+                    {isLoading || isFetching ? (
+                         Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="animate-pulse rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+                                <div className="flex gap-4">
+                                    <div className="h-14 w-14 rounded-2xl bg-gray-200 dark:bg-gray-800" />
+                                    <div className="flex-1 space-y-3">
+                                        <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-800 rounded" />
+                                        <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-800 rounded" />
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
-                    ))}
+                         ))
+                    ) : users.length > 0 ? (
+                        users.map((user) => (
+                            <motion.div
+                                key={user._id}
+                                whileHover={{ y: -2 }}
+                                className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="relative h-14 w-14 flex-shrink-0">
+                                        {user.avatar?.url ? (
+                                            <Image
+                                                src={cleanImageUrl(user.avatar.url)}
+                                                alt={user.name}
+                                                fill
+                                                className="rounded-2xl object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold text-lg">
+                                                {user.name.charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                                                    {user.name}
+                                                </h3>
+                                                <p className="truncate text-sm text-gray-500">
+                                                    {user.email}
+                                                </p>
+                                            </div>
+                                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${user.isActive ? statusStyles.active : statusStyles.inactive}`}>
+                                                {user.isActive ? "Active" : "Inactive"}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                            <div>
+                                                <p className="text-gray-500 text-xs">Role</p>
+                                                <p className="font-semibold text-gray-900 dark:text-white capitalize">
+                                                    {user.role}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500 text-xs">Joined</p>
+                                                <p className="font-semibold text-gray-900 dark:text-white">
+                                                    {formatDate(user.createdAt)}
+                                                </p>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <p className="text-gray-500 text-xs">Location</p>
+                                                <p className="font-semibold text-gray-900 dark:text-white truncate">
+                                                    {user.location?.city || user.location?.country 
+                                                        ? `${user.location.city}${user.location.city && user.location.country ? ", " : ""}${user.location.country}`
+                                                        : "N/A"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <div className="py-12 text-center text-gray-500">
+                            No customers found.
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination */}
-                <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Showing{" "}
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                            {(page - 1) * perPage + 1}
-                        </span>{" "}
-                        to{" "}
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                            {Math.min(page * perPage, filteredCustomers.length)}
-                        </span>{" "}
-                        of{" "}
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                            {filteredCustomers.length}
-                        </span>{" "}
-                        customers
-                    </p>
+                {totalPages > 1 && (
+                    <div className="flex flex-col gap-4 border-t border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Showing{" "}
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                                {(page - 1) * limit + 1}
+                            </span>{" "}
+                            to{" "}
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                                {Math.min(page * limit, pagination?.total || 0)}
+                            </span>{" "}
+                            of{" "}
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                                {pagination?.total}
+                            </span>{" "}
+                            customers
+                        </p>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                            className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <div className="flex items-center gap-2">
                             <button
-                                key={p}
-                                onClick={() => setPage(p)}
-                                className={`h-10 w-10 rounded-xl text-sm font-semibold transition ${p === page
-                                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/25"
-                                    : "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                                    }`}
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1 || isFetching}
+                                className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
-                                {p}
+                                <ChevronLeft className="h-4 w-4" />
                             </button>
-                        ))}
 
-                        <button
-                            onClick={() =>
-                                setPage((p) => Math.min(totalPages, p + 1))
-                            }
-                            disabled={page === totalPages}
-                            className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                                .map((p, i, arr) => (
+                                    <div key={p} className="flex items-center gap-2">
+                                        {i > 0 && arr[i-1] !== p - 1 && <span className="text-gray-400">...</span>}
+                                        <button
+                                            onClick={() => setPage(p)}
+                                            disabled={isFetching}
+                                            className={`h-10 w-10 rounded-xl text-sm font-semibold transition ${p === page
+                                                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/25"
+                                                : "border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                                                }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    </div>
+                                ))}
+
+                            <button
+                                onClick={() =>
+                                    setPage((p) => Math.min(totalPages, p + 1))
+                                }
+                                disabled={page === totalPages || isFetching}
+                                className="rounded-xl border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </motion.div>
         </div>
     );
