@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, Filter, Download, ChevronLeft, ChevronRight, Mail, MapPin, ShieldCheck, ShieldAlert, UserCheck, UserX, Calendar, Users } from "lucide-react";
+import { useState } from "react";
+import { Search, Filter, Download, ChevronLeft, ChevronRight, Mail, MapPin, ShieldCheck, ShieldAlert, UserCheck, UserX, Calendar, Users, Loader2, FileText, FileSpreadsheet, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGetUsersQuery } from "@/redux/features/user/userApi";
+import { useGetUsersQuery, useToggleUserStatusMutation } from "@/redux/features/user/userApi";
 import Image from "next/image";
+import toast from "react-hot-toast";
+import { exportToCSV, exportToPDF, prepareCustomerExport } from "@/lib/utils/export";
 
 const statusStyles = {
     active: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
@@ -57,9 +59,36 @@ export default function CustomersPage() {
         limit,
     });
 
+    const [toggleUserStatus, { isLoading: isUpdatingStatus }] = useToggleUserStatusMutation();
+
     const users = usersData?.data || [];
     const pagination = usersData?.pagination;
     const totalPages = pagination?.totalPages || 0;
+
+    const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+        try {
+            const res = await toggleUserStatus({ id, isActive: !currentStatus }).unwrap();
+            toast.success(res.message || "Status updated successfully");
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to update status");
+        }
+    };
+
+    const [showExportMenu, setShowExportMenu] = useState(false);
+
+    const handleExportCSV = () => {
+        const { csvHeaders, csvData } = prepareCustomerExport(users);
+        exportToCSV(users, `customers-${new Date().toISOString().split('T')[0]}`, undefined, { csvHeaders, csvData });
+        toast.success("CSV exported successfully!");
+        setShowExportMenu(false);
+    };
+
+    const handleExportPDF = () => {
+        const { pdfHeaders, pdfData } = prepareCustomerExport(users);
+        exportToPDF("Customer Report", pdfHeaders, pdfData, `customers-${new Date().toISOString().split('T')[0]}`);
+        toast.success("PDF download initiated!");
+        setShowExportMenu(false);
+    };
 
     const cleanImageUrl = (url: string) => {
         if (!url) return "";
@@ -87,10 +116,42 @@ export default function CustomersPage() {
                     </p>
                 </div>
 
-                <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    <Download className="h-4 w-4" />
-                    Export Customers
-                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                        <Download className="h-4 w-4" />
+                        Export Customers
+                        <ChevronDown className="h-4 w-4" />
+                    </button>
+
+                    <AnimatePresence>
+                        {showExportMenu && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="absolute right-0 top-full mt-2 w-48 z-50 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+                            >
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                                    Export as CSV
+                                </button>
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <FileText className="h-4 w-4 text-blue-500" />
+                                    Export as PDF
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Stats */}
@@ -281,10 +342,20 @@ export default function CustomersPage() {
                                             </td>
 
                                             <td className="px-6 py-5">
-                                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.isActive ? statusStyles.active : statusStyles.inactive}`}>
-                                                    {user.isActive ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+                                                <button
+                                                    onClick={() => handleToggleStatus(user._id, user.isActive)}
+                                                    disabled={isUpdatingStatus}
+                                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 ${user.isActive ? statusStyles.active : statusStyles.inactive}`}
+                                                >
+                                                    {isUpdatingStatus ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                    ) : user.isActive ? (
+                                                        <UserCheck className="h-3 w-3" />
+                                                    ) : (
+                                                        <UserX className="h-3 w-3" />
+                                                    )}
                                                     {user.isActive ? "Active" : "Inactive"}
-                                                </span>
+                                                </button>
                                             </td>
                                         </motion.tr>
                                     ))}
@@ -342,19 +413,23 @@ export default function CustomersPage() {
                                     </div>
 
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                                                    {user.name}
-                                                </h3>
-                                                <p className="truncate text-sm text-gray-500">
-                                                    {user.email}
-                                                </p>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                                                        {user.name}
+                                                    </h3>
+                                                    <p className="truncate text-sm text-gray-500">
+                                                        {user.email}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleToggleStatus(user._id, user.isActive)}
+                                                    disabled={isUpdatingStatus}
+                                                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase transition-all disabled:opacity-50 ${user.isActive ? statusStyles.active : statusStyles.inactive}`}
+                                                >
+                                                    {user.isActive ? "Active" : "Inactive"}
+                                                </button>
                                             </div>
-                                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${user.isActive ? statusStyles.active : statusStyles.inactive}`}>
-                                                {user.isActive ? "Active" : "Inactive"}
-                                            </span>
-                                        </div>
 
                                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                             <div>

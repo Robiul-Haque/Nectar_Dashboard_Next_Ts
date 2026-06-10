@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, ShoppingCart, Package, Tags, Users, LogOut, HandHelping, X, AlertTriangle, Award } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Tags, Users, LogOut, HandHelping, X, AlertTriangle, Award, Image as ImageIcon } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "@/redux/features/auth/authSlice";
 import toast from "react-hot-toast";
@@ -17,6 +17,7 @@ const navItems = [
     { label: "Products", href: "/dashboard/products", icon: Package },
     { label: "Categories", href: "/dashboard/categories", icon: Tags },
     { label: "Brands", href: "/dashboard/brands", icon: Award },
+    { label: "Sliders", href: "/dashboard/sliders", icon: ImageIcon },
     { label: "Customers", href: "/dashboard/customers", icon: Users },
     { label: "Support", href: "/dashboard/support", icon: HandHelping },
 ] as const;

@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { useGetOrdersQuery } from '@/redux/features/order/orderApi';
 import OrderTable from '@/components/dashboard/orders/OrderTable';
 import OrderDetailModal from '@/components/dashboard/orders/OrderDetailModal';
 import { Order } from '@/redux/features/order/orderTypes';
+import { exportToCSV, exportToPDF, prepareOrderExport } from '@/lib/utils/export';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function OrdersPage() {
     const [page, setPage] = useState(1);
@@ -19,35 +22,30 @@ export default function OrdersPage() {
         orderStatus: orderStatus === 'all' ? undefined : orderStatus,
     });
 
+    const [showExportMenu, setShowExportMenu] = useState(false);
+
     const handleExportCSV = () => {
-        if (!ordersData?.data || ordersData.data.length === 0) return;
+        if (!ordersData?.data || ordersData.data.length === 0) {
+            toast.error("No orders to export!");
+            return;
+        }
 
-        const headers = ['Order ID', 'Date', 'Customer', 'Email', 'Items', 'Amount', 'Status', 'Payment'];
-        const csvRows = ordersData.data.map(order => [
-            `#${order.orderId}`,
-            new Date(order.createdAt).toLocaleDateString(),
-            order.customer.name,
-            order.customer.email,
-            order.itemsCount,
-            order.totalPrice.toFixed(2),
-            order.orderStatus,
-            order.paymentStatus
-        ]);
+        const { csvHeaders, csvData } = prepareOrderExport(ordersData.data);
+        exportToCSV(ordersData.data, `orders-${orderStatus}-${new Date().toISOString().split('T')[0]}`, undefined, { csvHeaders, csvData });
+        toast.success("CSV exported successfully!");
+        setShowExportMenu(false);
+    };
 
-        const csvContent = [
-            headers.join(','),
-            ...csvRows.map(row => row.join(','))
-        ].join('\n');
+    const handleExportPDF = () => {
+        if (!ordersData?.data || ordersData.data.length === 0) {
+            toast.error("No orders to export!");
+            return;
+        }
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `orders_${orderStatus}_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const { pdfHeaders, pdfData } = prepareOrderExport(ordersData.data);
+        exportToPDF("Order Report", pdfHeaders, pdfData, `orders-${orderStatus}-${new Date().toISOString().split('T')[0]}`);
+        toast.success("PDF download initiated!");
+        setShowExportMenu(false);
     };
 
     const handleOrderClick = (order: Order) => {
@@ -104,14 +102,43 @@ export default function OrdersPage() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3 flex-shrink-0 w-full sm:w-auto">
-                    <button 
-                        onClick={handleExportCSV}
-                        disabled={!ordersData?.data || ordersData.data.length === 0}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-2xl text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                    </button>
+                    <div className="relative w-full sm:w-auto">
+                        <button
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            disabled={!ordersData?.data || ordersData.data.length === 0}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-2xl text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Download className="w-4 h-4" />
+                            Export
+                            <ChevronDown className="w-4 h-4" />
+                        </button>
+
+                        <AnimatePresence>
+                            {showExportMenu && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="absolute right-0 top-full mt-2 w-48 z-50 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+                                >
+                                    <button
+                                        onClick={handleExportCSV}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                    >
+                                        <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                                        Export as CSV
+                                    </button>
+                                    <button
+                                        onClick={handleExportPDF}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                    >
+                                        <FileText className="h-4 w-4 text-blue-500" />
+                                        Export as PDF
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
 

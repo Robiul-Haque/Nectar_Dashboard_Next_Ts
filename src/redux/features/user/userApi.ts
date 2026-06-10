@@ -12,7 +12,15 @@ export const userApi = baseApi.injectEndpoints({
             }),
             providesTags: [tagTypes.USER],
         }),
+        toggleUserStatus: builder.mutation<{ success: boolean; message: string }, { id: string; isActive: boolean }>({
+            query: ({ id, isActive }) => ({
+                url: `/user/toggle-status/${id}`,
+                method: "PATCH",
+                body: { isActive },
+            }),
+            invalidatesTags: [tagTypes.USER],
+        }),
     }),
 });
 
-export const { useGetUsersQuery } = userApi;
+export const { useGetUsersQuery, useToggleUserStatusMutation } = userApi;
