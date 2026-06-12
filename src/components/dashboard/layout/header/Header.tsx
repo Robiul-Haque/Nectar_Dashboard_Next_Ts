@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Menu, Search } from "lucide-react";
+import { Menu } from "lucide-react";
 import { motion } from "framer-motion";
 
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -11,6 +11,7 @@ import ProfileModal from "./ProfileModal";
 import useNotifications from "@/hooks/useNotifications";
 import DateTimeWidget from "./DateTimeWidget";
 import getInitials from "@/lib/utils/string";
+import GlobalSearch from "./GlobalSearch";
 
 interface HeaderProps {
     onMenuClick: () => void;
@@ -48,22 +49,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
                             <Menu className="h-5 w-5" />
                         </button>
 
-                        <div className="relative hidden w-full max-w-sm sm:block">
-                            <div className="group relative">
-                                {/* Glow Effect */}
-                                <div className="absolute -inset-0.5 rounded-2xl bg-linear-to-r from-emerald-500/20 via-green-500/10 to-emerald-500/20 opacity-0 blur-lg transition duration-500 group-focus-within:opacity-100" />
-
-                                {/* Search Icon */}
-                                <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-gray-400 transition-colors duration-300 group-focus-within:text-emerald-500 dark:text-gray-500 dark:group-focus-within:text-emerald-400" />
-
-                                {/* Search Input */}
-                                <input
-                                    type="search"
-                                    placeholder="Search orders, products..."
-                                    aria-label="Search orders and products"
-                                    className="relative w-full rounded-2xl border border-gray-200/80 bg-white/90 py-3 pl-12 pr-5 text-sm font-medium text-gray-900 shadow-sm backdrop-blur-xl transition-all duration-300 placeholder:text-gray-400 hover:border-emerald-200 hover:shadow-md focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none dark:border-gray-700/80 dark:bg-gray-800/80 dark:text-white dark:placeholder:text-gray-500 dark:hover:border-emerald-800 dark:focus:border-emerald-700"
-                                />
-                            </div>
+                        <div className="flex-1 max-w-sm">
+                            <GlobalSearch />
                         </div>
                     </div>
 

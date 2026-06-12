@@ -18,6 +18,70 @@ const verifyStyles = {
     unverified: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
 };
 
+function CustomStatusDropdown({ currentStatus, onStatusChange, isLoading }: { currentStatus: boolean; onStatusChange: (status: boolean) => void; isLoading: boolean; }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                disabled={isLoading}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
+                    currentStatus
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20"
+                }`}
+            >
+                {isLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                ) : currentStatus ? (
+                    <UserCheck className="h-3 w-3" />
+                ) : (
+                    <UserX className="h-3 w-3" />
+                )}
+                {currentStatus ? "Active" : "Inactive"}
+                <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isOpen && (
+                <div
+                    className="absolute z-50 right-0 top-full mt-2 w-36 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
+                    onMouseLeave={() => setIsOpen(false)}
+                >
+                    <button
+                        onClick={() => {
+                            onStatusChange(true);
+                            setIsOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            currentStatus
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
+                    >
+                        <UserCheck className="h-4 w-4" />
+                        Active
+                    </button>
+                    <button
+                        onClick={() => {
+                            onStatusChange(false);
+                            setIsOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            !currentStatus
+                                ? "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
+                    >
+                        <UserX className="h-4 w-4" />
+                        Inactive
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function StatCard({ title, value, icon: Icon, subtitle }: { title: string; value: string; subtitle: string; icon: any; }) {
     return (
         <motion.div
@@ -65,12 +129,12 @@ export default function CustomersPage() {
     const pagination = usersData?.pagination;
     const totalPages = pagination?.totalPages || 0;
 
-    const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    const handleUpdateStatus = async (id: string, newStatus: boolean) => {
         try {
-            const res = await toggleUserStatus({ id, isActive: !currentStatus }).unwrap();
-            toast.success(res.message || "Status updated successfully");
+            const res = await toggleUserStatus({ id, isActive: newStatus }).unwrap();
+            toast.success(res.message || "Status updated successfully!");
         } catch (error: any) {
-            toast.error(error?.data?.message || "Failed to update status");
+            toast.error(error?.data?.message || "Failed to update status!");
         }
     };
 
@@ -227,7 +291,7 @@ export default function CustomersPage() {
                 <div className="hidden overflow-x-auto lg:block">
                     <table className="w-full">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-gray-800/50">
+                            <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
                                 {[
                                     "Customer",
                                     "Contact",
@@ -269,97 +333,82 @@ export default function CustomersPage() {
                                     </tr>
                                 ))
                             ) : users.length > 0 ? (
-                                <AnimatePresence mode="wait">
-                                    {users.map((user, index) => (
-                                        <motion.tr
-                                            key={user._id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            transition={{ delay: index * 0.02 }}
-                                            className="transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-800/40"
-                                        >
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="relative h-12 w-12 flex-shrink-0">
-                                                        {user.avatar?.url ? (
-                                                            <Image
-                                                                src={cleanImageUrl(user.avatar.url)}
-                                                                alt={user.name}
-                                                                fill
-                                                                className="rounded-2xl object-cover ring-2 ring-gray-100 dark:ring-gray-700"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex h-full w-full items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold text-lg">
-                                                                {user.name.charAt(0)}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="font-semibold text-gray-900 dark:text-white truncate">
-                                                            {user.name}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 font-mono truncate">
-                                                            ID: {user._id.slice(-8).toUpperCase()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-2 text-gray-900 dark:text-white">
-                                                    <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                                    <span className="text-sm font-medium">{user.email}</span>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                                    <MapPin className="h-3.5 w-3.5" />
-                                                    <span className="text-sm">
-                                                        {user.location?.city || user.location?.country 
-                                                            ? `${user.location.city}${user.location.city && user.location.country ? ", " : ""}${user.location.country}`
-                                                            : "N/A"}
-                                                    </span>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-6 py-5">
-                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-                                                    {user.role}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-5">
-                                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.isVerified ? verifyStyles.verified : verifyStyles.unverified}`}>
-                                                    {user.isVerified ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
-                                                    {user.isVerified ? "Verified" : "Unverified"}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-5 text-sm text-gray-700 dark:text-gray-300">
-                                                {formatDate(user.createdAt)}
-                                            </td>
-
-                                            <td className="px-6 py-5">
-                                                <button
-                                                    onClick={() => handleToggleStatus(user._id, user.isActive)}
-                                                    disabled={isUpdatingStatus}
-                                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 ${user.isActive ? statusStyles.active : statusStyles.inactive}`}
-                                                >
-                                                    {isUpdatingStatus ? (
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                    ) : user.isActive ? (
-                                                        <UserCheck className="h-3 w-3" />
+                                users.map((user) => (
+                                    <tr
+                                        key={user._id}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                                    >
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative h-12 w-12 flex-shrink-0">
+                                                    {user.avatar?.url ? (
+                                                        <Image
+                                                            src={cleanImageUrl(user.avatar.url)}
+                                                            alt={user.name}
+                                                            fill
+                                                            className="rounded-2xl object-cover ring-2 ring-gray-100 dark:ring-gray-700"
+                                                        />
                                                     ) : (
-                                                        <UserX className="h-3 w-3" />
+                                                        <div className="flex h-full w-full items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold text-lg">
+                                                            {user.name.charAt(0)}
+                                                        </div>
                                                     )}
-                                                    {user.isActive ? "Active" : "Inactive"}
-                                                </button>
-                                            </td>
-                                        </motion.tr>
-                                    ))}
-                                </AnimatePresence>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-gray-900 dark:text-white truncate">
+                                                        {user.name}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 font-mono truncate">
+                                                        ID: {user._id.slice(-8).toUpperCase()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2 text-gray-900 dark:text-white">
+                                                <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                                <span className="text-sm font-medium">{user.email}</span>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                                <MapPin className="h-3.5 w-3.5" />
+                                                <span className="text-sm">
+                                                    {user.location?.city || user.location?.country 
+                                                        ? `${user.location.city}${user.location.city && user.location.country ? ", " : ""}${user.location.country}`
+                                                        : "N/A"}
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-6 py-5">
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+                                                {user.role}
+                                            </span>
+                                        </td>
+
+                                        <td className="px-6 py-5">
+                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.isVerified ? verifyStyles.verified : verifyStyles.unverified}`}>
+                                                {user.isVerified ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
+                                                {user.isVerified ? "Verified" : "Unverified"}
+                                            </span>
+                                        </td>
+
+                                        <td className="px-6 py-5 text-sm text-gray-700 dark:text-gray-300">
+                                            {formatDate(user.createdAt)}
+                                        </td>
+
+                                        <td className="px-6 py-5">
+                                            <CustomStatusDropdown
+                                                currentStatus={user.isActive}
+                                                onStatusChange={(newStatus) => handleUpdateStatus(user._id, newStatus)}
+                                                isLoading={isUpdatingStatus}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))
                             ) : (
                                 <tr>
                                     <td colSpan={7} className="py-24 text-center">
@@ -422,13 +471,11 @@ export default function CustomersPage() {
                                                         {user.email}
                                                     </p>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleToggleStatus(user._id, user.isActive)}
-                                                    disabled={isUpdatingStatus}
-                                                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase transition-all disabled:opacity-50 ${user.isActive ? statusStyles.active : statusStyles.inactive}`}
-                                                >
-                                                    {user.isActive ? "Active" : "Inactive"}
-                                                </button>
+                                                <CustomStatusDropdown
+                                                    currentStatus={user.isActive}
+                                                    onStatusChange={(newStatus) => handleUpdateStatus(user._id, newStatus)}
+                                                    isLoading={isUpdatingStatus}
+                                                />
                                             </div>
 
                                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
