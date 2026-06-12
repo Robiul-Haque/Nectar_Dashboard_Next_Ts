@@ -1,6 +1,6 @@
 import { baseApi } from "../../api/baseApi";
 import { tagTypes } from "../../api/tagTypes";
-import { GetUsersParams, GetUsersResponse } from "./userTypes";
+import { AdminProfileResponse, GetUsersParams, GetUsersResponse, UpdateAdminProfileResponse } from "./userTypes";
 
 export const userApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -20,7 +20,27 @@ export const userApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: [tagTypes.USER],
         }),
+        getAdminProfile: builder.query<AdminProfileResponse, void>({
+            query: () => ({
+                url: "/user/admin/profile",
+                method: "GET",
+            }),
+            providesTags: [tagTypes.USER],
+        }),
+        updateAdminProfile: builder.mutation<UpdateAdminProfileResponse, FormData>({
+            query: (formData) => ({
+                url: "/user/admin/profile-update",
+                method: "PUT",
+                body: formData,
+            }),
+            invalidatesTags: [tagTypes.USER],
+        }),
     }),
 });
 
-export const { useGetUsersQuery, useToggleUserStatusMutation } = userApi;
+export const { 
+    useGetUsersQuery, 
+    useToggleUserStatusMutation,
+    useGetAdminProfileQuery,
+    useUpdateAdminProfileMutation
+} = userApi;
