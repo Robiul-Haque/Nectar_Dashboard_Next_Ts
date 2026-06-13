@@ -192,7 +192,7 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
                                     key={item.href}
                                     href={item.href}
                                     className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300 ${isActive
-                                        ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400"
+                                        ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
                                         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                                         }`}
                                 >
