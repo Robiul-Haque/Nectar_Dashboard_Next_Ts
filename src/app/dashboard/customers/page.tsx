@@ -7,6 +7,7 @@ import { useGetUsersQuery, useToggleUserStatusMutation } from "@/redux/features/
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { exportToCSV, exportToPDF, prepareCustomerExport } from "@/lib/utils/export";
+import CustomerDetailsDrawer from "@/components/dashboard/customers/CustomerDetailsDrawer";
 
 const statusStyles = {
     active: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
@@ -22,7 +23,7 @@ function CustomStatusDropdown({ currentStatus, onStatusChange, isLoading }: { cu
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="relative">
+        <div className="relative" onClick={(e) => e.stopPropagation()}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={isLoading}
@@ -115,6 +116,9 @@ export default function CustomersPage() {
     const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
     const [page, setPage] = useState(1);
     const limit = 10;
+
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     const { data: usersData, isLoading, isFetching } = useGetUsersQuery({
         search,
@@ -336,7 +340,11 @@ export default function CustomersPage() {
                                 users.map((user) => (
                                     <tr
                                         key={user._id}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                                        onClick={() => {
+                                            setSelectedCustomerId(user._id);
+                                            setIsDrawerOpen(true);
+                                        }}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer transition-all"
                                     >
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
@@ -443,7 +451,11 @@ export default function CustomersPage() {
                             <motion.div
                                 key={user._id}
                                 whileHover={{ y: -2 }}
-                                className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm"
+                                onClick={() => {
+                                    setSelectedCustomerId(user._id);
+                                    setIsDrawerOpen(true);
+                                }}
+                                className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm cursor-pointer transition-all"
                             >
                                 <div className="flex items-start gap-4">
                                     <div className="relative h-14 w-14 flex-shrink-0">
@@ -570,6 +582,12 @@ export default function CustomersPage() {
                     </div>
                 )}
             </motion.div>
+
+            <CustomerDetailsDrawer
+                customerId={selectedCustomerId}
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+            />
         </div>
     );
 }

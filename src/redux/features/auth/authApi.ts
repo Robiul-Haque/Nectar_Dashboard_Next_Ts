@@ -5,7 +5,7 @@ export const authApi = baseApi.injectEndpoints({
 
         adminLogin: builder.mutation({
             query: (body) => ({
-                url: "/auth/admin/signup",
+                url: "/auth/admin/login",
                 method: "POST",
                 body,
             }),
@@ -24,7 +24,4 @@ export const authApi = baseApi.injectEndpoints({
     }),
 });
 
-export const {
-    useAdminLoginMutation,
-    useGetProfileQuery,
-} = authApi;
+export const { useAdminLoginMutation, useGetProfileQuery } = authApi;
