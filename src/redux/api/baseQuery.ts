@@ -1,67 +1,78 @@
-import {fetchBaseQuery,BaseQueryFn,FetchArgs,FetchBaseQueryError,} from "@reduxjs/toolkit/query/react";
+import { fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "../store";
-import {logout,setCredentials} from "../features/auth/authSlice";
-import { setCookie } from "@/lib/cookies";
+import { logout, setCredentials } from "../features/auth/authSlice";
+import { setCookie, deleteCookie } from "@/lib/cookies";
 
 const rawBaseQuery = fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     credentials: "include",
-    prepareHeaders: (headers,{ getState }) => {
-        const token = ( getState() as RootState).auth.accessToken;
-        if (token) headers.set("authorization",`Bearer ${token}`);
-
+    prepareHeaders: (headers, { getState }) => {
+        const token = (getState() as RootState).auth.accessToken;
+        if (token) headers.set("authorization", `Bearer ${token}`);
         return headers;
     },
 });
 
-export const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs,unknown,FetchBaseQueryError> = async (args,api,extraOptions) => {
-        let result = await rawBaseQuery(args,api,extraOptions);
+// Mutex to prevent multiple simultaneous refresh calls (race condition fix)
+let isRefreshing = false;
 
-        // Access token expired
-        if (result.error?.status === 401) {
-            const refreshResult =
-                await rawBaseQuery(
-                    {
-                        url: "/auth/admin/refresh-token",
-                        method: "POST",
-                    },
-                    api,
-                    extraOptions
-                );
+export const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+    args,
+    api,
+    extraOptions
+) => {
+    let result = await rawBaseQuery(args, api, extraOptions);
+
+    // Access token expired — attempt refresh
+    if (result.error?.status === 401) {
+        // If already refreshing, wait briefly and retry original request
+        if (isRefreshing) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            return rawBaseQuery(args, api, extraOptions);
+        }
+
+        isRefreshing = true;
+
+        try {
+            const refreshResult = await rawBaseQuery(
+                {
+                    url: "/auth/admin/refresh-token",
+                    method: "POST",
+                },
+                api,
+                extraOptions
+            );
 
             if (refreshResult.data) {
-                const state =
-                    api.getState() as RootState;
+                const state = api.getState() as RootState;
+                const refreshData = refreshResult.data as {
+                    data: { accessToken: string };
+                };
 
-                const refreshData =
-                    refreshResult.data as {
-                        data: {
-                            accessToken: string;
-                        };
-                    };
+                const newAccessToken = refreshData.data.accessToken;
 
+                // Update Redux state
                 api.dispatch(
                     setCredentials({
                         user: state.auth.user,
-
-                        accessToken:
-                            refreshData.data
-                                .accessToken,
+                        accessToken: newAccessToken,
                     })
                 );
 
-                setCookie("accessToken", refreshData.data.accessToken);
+                // Update browser cookie so Next.js middleware sees the new token
+                setCookie("accessToken", newAccessToken);
 
-                // Retry original request
-                result = await rawBaseQuery(
-                    args,
-                    api,
-                    extraOptions
-                );
+                // Retry the original failed request with the new token
+                result = await rawBaseQuery(args, api, extraOptions);
             } else {
+                // Refresh failed — clear everything and redirect to login
+                deleteCookie("accessToken");
                 api.dispatch(logout());
             }
+        } finally {
+            isRefreshing = false;
         }
+    }
 
-        return result;
-    };
+    return result;
+};

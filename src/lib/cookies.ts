@@ -1,6 +1,11 @@
-export const setCookie = (name: string, value: string, days: number = 7) => {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+/**
+ * Set a browser cookie.
+ * @param name Cookie name
+ * @param value Cookie value
+ * @param maxAgeSeconds Max age in seconds (default: 7200 = 2 hours, matching ACCESS_TOKEN_EXPIRES_IN=120m)
+ */
+export const setCookie = (name: string, value: string, maxAgeSeconds: number = 7200) => {
+    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; path=/; SameSite=Lax`;
 };
 
 export const getCookie = (name: string) => {
@@ -12,5 +17,5 @@ export const getCookie = (name: string) => {
 
 export const deleteCookie = (name: string) => {
     // Standard cookie deletion for client-side cookies
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+    document.cookie = `${name}=; max-age=0; path=/; SameSite=Lax`;
 };
