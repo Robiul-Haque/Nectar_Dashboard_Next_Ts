@@ -61,7 +61,7 @@ const authSlice = createSlice({
             state.accessToken = null;
             state.user = null;
             state.status = "unauthenticated";
-            // Clear browser cookie so Next.js middleware stops redirecting to dashboard
+            // Clear browser cookie so Next.js proxy stops redirecting to dashboard
             if (typeof window !== "undefined") {
                 deleteCookie("accessToken");
             }

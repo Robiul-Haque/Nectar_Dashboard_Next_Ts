@@ -77,7 +77,7 @@ export default function LoginPage() {
                 })
             );
 
-            // set cookie for middleware
+            // set cookie for proxy
             setCookie("accessToken", token);
 
             setSuccess(true);
@@ -85,7 +85,7 @@ export default function LoginPage() {
 
             // Instant navigation instead of delayed setTimeout
             router.push("/dashboard");
-            router.refresh(); // Force Next.js to re-evaluate middleware immediately
+            router.refresh(); // Force Next.js to re-evaluate proxy immediately
 
         } catch (err: any) {
             setError(err?.data?.message || "Login failed");
@@ -145,6 +145,7 @@ export default function LoginPage() {
                             width={1200}
                             height={800}
                             className="h-70 w-full object-cover"
+                            priority
                         />
 
                         <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-xl bg-white/90 px-3 py-2 backdrop-blur">

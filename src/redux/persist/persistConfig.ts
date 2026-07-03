@@ -1,4 +1,4 @@
-import storage from "redux-persist/lib/storage";
+import storage from "../storage";
 
 export const authPersistConfig = {
     key: "auth",

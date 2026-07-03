@@ -59,7 +59,7 @@ export const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs, unknown, Fetc
                     })
                 );
 
-                // Update browser cookie so Next.js middleware sees the new token
+                // Update browser cookie so Next.js proxy sees the new token
                 setCookie("accessToken", newAccessToken);
 
                 // Retry the original failed request with the new token

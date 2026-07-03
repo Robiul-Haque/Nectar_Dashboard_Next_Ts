@@ -7,7 +7,7 @@ import {
     persistReducer,
 } from "redux-persist";
 
-import storage from "redux-persist/lib/storage";
+import storage from "./storage";
 
 import authReducer from "./features/auth/authSlice";
 
