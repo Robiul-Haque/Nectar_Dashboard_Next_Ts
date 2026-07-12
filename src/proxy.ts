@@ -23,6 +23,12 @@ function isTokenExpired(token: string): boolean {
 }
 
 export function proxy(req: NextRequest) {
+    // Allow Server Actions to pass through without redirecting.
+    // They are POST requests and middleware redirection will crash the client.
+    if (req.headers.has("next-action")) {
+        return NextResponse.next();
+    }
+
     const token = req.cookies.get("accessToken")?.value;
 
     const isLoginPage = req.nextUrl.pathname === "/login";
