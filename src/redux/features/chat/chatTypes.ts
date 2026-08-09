@@ -11,6 +11,25 @@ export interface Chat {
     participants: Participant[];
     lastUpdated: string;
     lastMessage: string;
+    status?: "open" | "resolved";
+    chatType?: "customer_support" | "driver_support" | "direct";
+    unreadCount?: number;
+}
+
+export interface RelatedOrder {
+    _id: string;
+    orderId: string;
+    orderStatus: string;
+    totalAmount: number;
+    paymentStatus: string;
+    createdAt: string;
+}
+
+export interface ChatDetailsResponse {
+    success: boolean;
+    data: Chat & {
+        relatedOrder?: RelatedOrder | null;
+    };
 }
 
 export interface MessageImage {
@@ -45,6 +64,8 @@ export interface GetChatsResponse {
 export interface GetChatsParams {
     page?: number;
     limit?: number;
+    chatType?: "customer_support" | "driver_support" | "direct" | string;
+    status?: "open" | "resolved" | string;
 }
 
 export interface GetMessagesParams {

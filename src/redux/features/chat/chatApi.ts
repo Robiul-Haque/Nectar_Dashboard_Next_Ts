@@ -1,6 +1,6 @@
 import { baseApi } from "../../api/baseApi";
 import { tagTypes } from "../../api/tagTypes";
-import { GetChatsParams, GetChatsResponse, CreateChatRequest, Chat, GetMessagesParams, GetMessagesResponse, SendMessageRequest, Message } from "./chatTypes";
+import { GetChatsParams, GetChatsResponse, CreateChatRequest, Chat, GetMessagesParams, GetMessagesResponse, SendMessageRequest, Message, ChatDetailsResponse } from "./chatTypes";
 
 export const chatApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -11,6 +11,14 @@ export const chatApi = baseApi.injectEndpoints({
                 params: params,
             }),
             providesTags: [tagTypes.CHAT],
+        }),
+
+        getChatDetails: builder.query<ChatDetailsResponse, string>({
+            query: (chatId) => ({
+                url: `/chat/${chatId}`,
+                method: "GET",
+            }),
+            providesTags: (result, error, id) => [{ type: tagTypes.CHAT, id }],
         }),
 
         createChat: builder.mutation<{ success: boolean; message: string; data: Chat }, CreateChatRequest>({
@@ -55,6 +63,18 @@ export const chatApi = baseApi.injectEndpoints({
             invalidatesTags: (result, error, arg) => [{ type: tagTypes.CHAT, id: arg }],
         }),
 
+        updateChatStatus: builder.mutation<{ success: boolean; message: string; data: Chat }, { chatId: string; status: "open" | "resolved" }>({
+            query: ({ chatId, status }) => ({
+                url: `/chat/${chatId}/status`,
+                method: "PATCH",
+                body: { status },
+            }),
+            invalidatesTags: (result, error, arg) => [
+                tagTypes.CHAT,
+                { type: tagTypes.CHAT, id: arg.chatId },
+            ],
+        }),
+
         deleteMessage: builder.mutation<{ success: boolean; message: string }, string>({
             query: (messageId) => ({
                 url: `/message/${messageId}`,
@@ -68,9 +88,11 @@ export const chatApi = baseApi.injectEndpoints({
 
 export const {
     useGetChatsQuery,
+    useGetChatDetailsQuery,
     useCreateChatMutation,
     useGetMessagesQuery,
     useSendMessageMutation,
     useMarkAsReadMutation,
+    useUpdateChatStatusMutation,
     useDeleteMessageMutation,
 } = chatApi;
