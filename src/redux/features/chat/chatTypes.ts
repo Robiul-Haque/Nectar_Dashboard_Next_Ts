@@ -4,6 +4,7 @@ export interface Participant {
     email: string;
     role: string;
     avatar?: string;
+    isOnline?: boolean;
 }
 
 export interface Chat {

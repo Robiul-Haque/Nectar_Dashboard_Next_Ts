@@ -36,23 +36,36 @@ export const chatApi = baseApi.injectEndpoints({
                 method: "GET",
                 params: params,
             }),
-            transformResponse: (response: GetMessagesResponse) => {
-                // Extract nested data and reverse to show oldest at top
-                return response.data.data.reverse();
+            transformResponse: (response: any) => {
+                // Extract messages array (supports both response.data array and legacy response.data.data array)
+                const list = Array.isArray(response?.data)
+                    ? response.data
+                    : Array.isArray(response?.data?.data)
+                    ? response.data.data
+                    : [];
+                // Clone array before reversing to avoid mutating frozen RTK Query state
+                return [...list].reverse();
             },
             providesTags: (result, error, arg) => [{ type: tagTypes.CHAT, id: arg.chatId }],
         }),
 
-        sendMessage: builder.mutation<{ success: boolean; message: string; data: Message }, SendMessageRequest>({
+        sendMessage: builder.mutation<{ success: boolean; message: string; data: Message }, SendMessageRequest | FormData>({
             query: (data) => ({
                 url: "/message/send",
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, arg) => [
-                tagTypes.CHAT,
-                { type: tagTypes.CHAT, id: arg.chatId },
-            ],
+            invalidatesTags: (result, error, arg) => {
+                let chatId: string | null = null;
+                if (arg instanceof FormData) {
+                    chatId = arg.get("chatId") as string;
+                } else if (typeof arg === "object" && arg !== null && "chatId" in arg) {
+                    chatId = (arg as any).chatId;
+                }
+                return chatId
+                    ? [tagTypes.CHAT, { type: tagTypes.CHAT, id: chatId }]
+                    : [tagTypes.CHAT];
+            },
         }),
 
         markAsRead: builder.mutation<{ success: boolean; message: string }, string>({

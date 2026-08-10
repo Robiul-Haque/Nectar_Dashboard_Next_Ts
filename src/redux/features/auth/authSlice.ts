@@ -1,10 +1,20 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { deleteCookie } from "@/lib/cookies";
 
-interface DecodedUser {
+export interface DecodedUser {
     id?: string;
+    _id?: string;
+    name?: string;
     role?: string;
     email?: string;
+    avatar?: {
+        url?: string | null;
+        publicId?: string | null;
+    } | string | null;
+    image?: {
+        url?: string | null;
+        publicId?: string | null;
+    } | string | null;
     iat?: number;
     exp?: number;
 }
@@ -32,8 +42,12 @@ const authSlice = createSlice({
                 accessToken: string;
                 user?: DecodedUser | null;
                 id?: string;
+                _id?: string;
+                name?: string;
                 role?: string;
                 email?: string;
+                avatar?: any;
+                image?: any;
                 iat?: number;
                 exp?: number;
             }>
@@ -44,11 +58,15 @@ const authSlice = createSlice({
             // If user object is provided, use it. Otherwise, use the flat properties.
             if (user) {
                 state.user = user;
-            } else if (rest.id || rest.role) {
+            } else if (rest.id || rest._id || rest.role) {
                 state.user = {
-                    id: rest.id,
+                    id: rest.id || rest._id,
+                    _id: rest._id || rest.id,
+                    name: rest.name,
                     role: rest.role,
                     email: rest.email,
+                    avatar: rest.avatar,
+                    image: rest.image,
                     iat: rest.iat,
                     exp: rest.exp,
                 };

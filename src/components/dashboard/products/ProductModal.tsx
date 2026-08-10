@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, UploadCloud, Loader2 } from "lucide-react";
+import { X, UploadCloud, Loader2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -117,10 +117,14 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
     const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
     const isLoading = isCreating || isUpdating;
 
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
     const {
         register,
         handleSubmit,
         reset,
+        getValues,
+        setValue,
         formState: { errors },
     } = useForm<ProductFormData>({
         // Cast is safe: updateSchema is a relaxed superset of createSchema.
@@ -128,6 +132,65 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
         resolver: zodResolver(isEdit ? updateSchema : createSchema) as Resolver<ProductFormData>,
         defaultValues: FORM_DEFAULTS,
     });
+
+    // ── AI Content Auto Generator ──────────────────────────────────────────────
+
+    const handleAutoGenerate = async () => {
+        const currentName = getValues("name")?.trim();
+        if (!currentName) {
+            toast.error("Please enter a product name first to generate content");
+            return;
+        }
+
+        const currentCategoryId = getValues("category");
+        const currentBrandId = getValues("brand");
+        const currentUnit = getValues("measurementUnit");
+
+        const categoryObj = categories.find((c) => c._id === currentCategoryId);
+        const brandObj = brands.find((b) => b._id === currentBrandId);
+
+        setIsGeneratingAI(true);
+        const toastId = toast.loading("Generating product content with AI...");
+
+        try {
+            const response = await fetch("/api/ai/generate-product", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: currentName,
+                    categoryName: categoryObj?.name,
+                    brandName: brandObj?.name,
+                    measurementUnit: currentUnit,
+                }),
+            });
+
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Failed to generate AI content");
+            }
+
+            const { description, nutrition, suggestedSku } = result.data;
+
+            if (description) {
+                setValue("description", description, { shouldValidate: true, shouldDirty: true });
+            }
+            if (nutrition) {
+                setValue("nutrition", nutrition, { shouldValidate: true, shouldDirty: true });
+            }
+            if (suggestedSku && !getValues("sku")?.trim()) {
+                setValue("sku", suggestedSku, { shouldValidate: true, shouldDirty: true });
+            }
+
+            toast.success("Product content generated successfully!", { id: toastId });
+        } catch (error: any) {
+            console.error("AI Generation Error:", error);
+            toast.error(error?.message || "Failed to generate AI content", { id: toastId });
+        } finally {
+            setIsGeneratingAI(false);
+        }
+    };
 
     // ── Populate form on open ──────────────────────────────────────────────────
 
@@ -438,15 +501,36 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
 
                                 {/* Description */}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                        Description
-                                    </label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            Description
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={handleAutoGenerate}
+                                            disabled={isLoading || isGeneratingAI}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-xs transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 cursor-pointer"
+                                            title="Auto generate description, nutrition info & SKU with Gemini AI"
+                                        >
+                                            {isGeneratingAI ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>Generating...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="w-3.5 h-3.5" />
+                                                    <span>Auto Generate Content</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                     <textarea
                                         {...register("description")}
                                         placeholder="Organic farm fresh greens..."
                                         rows={3}
                                         className={`${inputCls(!!errors.description)} resize-none`}
-                                        disabled={isLoading}
+                                        disabled={isLoading || isGeneratingAI}
                                     />
                                     {errors.description && <p className="text-[10px] text-red-500">{errors.description.message}</p>}
                                 </div>

@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Send, Paperclip, CheckCheck, Loader2, Trash2, X, MessageSquare, Truck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Search, Send, Paperclip, CheckCheck, Loader2, Trash2, X, MessageSquare, Truck, CheckCircle2, RotateCcw, Maximize2 } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import {
-    useGetChatsQuery,
-    useGetChatDetailsQuery,
-    useGetMessagesQuery,
-    useSendMessageMutation,
-    useMarkAsReadMutation,
-    useDeleteMessageMutation,
-    chatApi,
-} from "@/redux/features/chat/chatApi";
-import type { Participant, Message as ChatMessage } from "@/redux/features/chat/chatTypes";
+import { useGetChatsQuery, useGetChatDetailsQuery, useGetMessagesQuery, useSendMessageMutation, useMarkAsReadMutation, useDeleteMessageMutation, useUpdateChatStatusMutation, chatApi } from "@/redux/features/chat/chatApi";
+import type { Chat, Message as ChatMessage, Participant } from "@/redux/features/chat/chatTypes";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 import { useAppDispatch } from "@/redux/hook";
+import { useGetAdminProfileQuery } from "@/redux/features/user/userApi";
 import { getSocket, initializeSocket } from "@/lib/socket";
 
 // Helper Functions
@@ -44,19 +37,24 @@ const formatMessageTime = (dateString?: string) => {
     return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 };
 
-const cleanImageUrl = (url: string | undefined | null) => {
+const cleanImageUrl = (url?: string | null) => {
     if (!url) return "";
     return url.trim().replace(/`/g, "");
 };
 
-const getAvatarUrl = (participant?: Participant) => {
-    if (!participant) return "https://i.pravatar.cc/150";
-    if (participant.avatar) return cleanImageUrl(participant.avatar);
-    return `https://i.pravatar.cc/150?u=${participant._id}`;
+const getAvatarUrl = (participant?: Participant | any) => {
+    if (!participant) return "https://i.pravatar.cc/150?u=admin";
+    const avatar = participant?.avatar?.url || participant?.avatar || participant?.image?.url || participant?.image;
+    if (avatar && typeof avatar === "string" && avatar.trim()) {
+        return cleanImageUrl(avatar);
+    }
+    const id = participant?._id || participant?.id || "admin";
+    return `https://i.pravatar.cc/150?u=${id}`;
 };
 
 // URL detector helper to render links inside text messages safely
-const renderTextWithLinks = (text: string) => {
+const renderTextWithLinks = (text?: string) => {
+    if (!text) return null;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
 
@@ -112,8 +110,15 @@ export default function SupportChatPage() {
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
     const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
     const [isTyping, setIsTyping] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+    const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+    const selectedChatIdRef = useRef<string | null>(selectedChatId);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        selectedChatIdRef.current = selectedChatId;
+    }, [selectedChatId]);
 
     // Image Upload State
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -121,47 +126,89 @@ export default function SupportChatPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Redux
-    const { data: chatData, isLoading: chatsLoading, isFetching: chatsFetching } = useGetChatsQuery({
+    const { data: chatData, isLoading: chatsLoading } = useGetChatsQuery({
         page: 1,
         limit: 50,
         chatType: chatTypeFilter,
     });
     const currentUser = useSelector((state: RootState) => state.auth.user);
     const currentUserId = currentUser?.id;
+    const { data: adminProfileRes } = useGetAdminProfileQuery();
+    const adminProfile = adminProfileRes?.data;
+
+    const adminAvatar = useMemo(() => {
+        const rawProfile = adminProfile as any;
+        const avatarUrl =
+            adminProfile?.avatar?.url ||
+            (typeof adminProfile?.avatar === "string" ? adminProfile.avatar : undefined) ||
+            rawProfile?.image?.url ||
+            rawProfile?.image;
+        if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.trim()) {
+            return cleanImageUrl(avatarUrl);
+        }
+        return getAvatarUrl(adminProfile || currentUser);
+    }, [adminProfile, currentUser]);
 
     const {
         data: messages,
         isLoading: messagesLoading,
-        isFetching: messagesFetching,
     } = useGetMessagesQuery(
-        { chatId: selectedChatId! },
+        { chatId: selectedChatId ?? "" },
         { skip: !selectedChatId }
     );
 
-    const { data: chatDetailsRes } = useGetChatDetailsQuery(selectedChatId!, {
+    const { data: chatDetailsRes } = useGetChatDetailsQuery(selectedChatId ?? "", {
         skip: !selectedChatId,
     });
 
     const [sendMessage, { isLoading: sendingMessage }] = useSendMessageMutation();
     const [markAsRead] = useMarkAsReadMutation();
     const [deleteMessage, { isLoading: deletingMessage }] = useDeleteMessageMutation();
+    const [updateChatStatus, { isLoading: updatingStatus }] = useUpdateChatStatusMutation();
 
     // Derived Data
     const chats = chatData?.data || [];
-    
+
+    // Helper to extract the other participant (customer/driver) excluding current logged in admin
+    const getOtherParticipant = useCallback(
+        (chat?: Chat | null): Participant | null => {
+            if (!chat || !chat.participants || !Array.isArray(chat.participants) || chat.participants.length === 0) return null;
+            if (currentUserId) {
+                const found = chat.participants.find((p) => p && String(p._id || (p as any).id) !== String(currentUserId));
+                if (found) return found;
+            }
+            return chat.participants[0] || null;
+        },
+        [currentUserId]
+    );
+
+    // Seed online user IDs from initial chat query data
+    useEffect(() => {
+        if (chats.length > 0) {
+            const initialOnlineIds = new Set<string>();
+            chats.forEach((chat) => {
+                const p = getOtherParticipant(chat);
+                if (p && p.isOnline) initialOnlineIds.add(String(p._id));
+            });
+            if (initialOnlineIds.size > 0) {
+                setOnlineUserIds((prev) => new Set([...Array.from(prev), ...Array.from(initialOnlineIds)]));
+            }
+        }
+    }, [chats, getOtherParticipant]);
+
     const filteredChats = useMemo(() => {
         if (!searchQuery.trim()) return chats;
         const lowerQuery = searchQuery.toLowerCase().trim();
         return chats.filter((chat) => {
-            const participant = chat.participants?.[0];
+            const participant = getOtherParticipant(chat);
             if (!participant) return false;
-            const matchesName = participant.name.toLowerCase().includes(lowerQuery);
-            const matchesEmail = participant.email.toLowerCase().includes(lowerQuery);
+            const matchesName = (participant.name || "").toLowerCase().includes(lowerQuery);
+            const matchesEmail = (participant.email || "").toLowerCase().includes(lowerQuery);
             const matchesLastMessage = (chat.lastMessage || "").toLowerCase().includes(lowerQuery);
             return matchesName || matchesEmail || matchesLastMessage;
         });
-    }, [chats, searchQuery]);
-    
+    }, [chats, searchQuery, getOtherParticipant]);
+
     const messagesArray = useMemo(() => {
         if (localMessages.length > 0 && messages) {
             const combined = [...messages, ...localMessages];
@@ -180,76 +227,233 @@ export default function SupportChatPage() {
 
     const selectedContact = useMemo(() => {
         if (!selectedChat) return null;
-        const participant = selectedChat.participants?.[0];
+        const participant = getOtherParticipant(selectedChat);
         if (!participant) return null;
+
+        const isOnline = onlineUserIds.has(String(participant._id)) || Boolean(participant.isOnline);
 
         return {
             id: selectedChat._id,
+            participantId: participant._id,
             name: participant.name,
             email: participant.email,
             avatar: getAvatarUrl(participant),
             role: participant.role,
+            status: selectedChat.status || "open",
             chatType: selectedChat.chatType || "customer_support",
             message: selectedChat.lastMessage,
             time: formatLastUpdated(selectedChat.lastUpdated),
+            isOnline,
         };
-    }, [selectedChat]);
+    }, [selectedChat, onlineUserIds, getOtherParticipant]);
 
     const relatedOrder = chatDetailsRes?.data?.relatedOrder;
+
+    const handleToggleStatus = async () => {
+        if (!selectedChatId || !selectedChat) return;
+        const newStatus = selectedChat.status === "resolved" ? "open" : "resolved";
+        try {
+            await updateChatStatus({ chatId: selectedChatId, status: newStatus }).unwrap();
+            toast.success(`Conversation marked as ${newStatus}`);
+        } catch (err: any) {
+            toast.error(err?.data?.message || "Failed to update chat status");
+        }
+    };
 
     // Socket Effects
     useEffect(() => {
         const socket = initializeSocket();
         if (!socket) return;
 
-        if (currentUserId) {
-            socket.emit("joinRoom", { chatId: currentUserId });
+        const handleConnect = () => {
+            socket.emit("getOnlineUsers");
+            if (currentUserId) {
+                socket.emit("joinRoom", { chatId: currentUserId });
+            }
+            const activeId = selectedChatIdRef.current;
+            if (activeId) {
+                socket.emit("joinRoom", { chatId: activeId });
+                socket.emit("conversation:join", { chatId: activeId });
+            }
+        };
+
+        if (socket.connected) {
+            handleConnect();
         }
 
-        const handleNewMessage = (message: ChatMessage) => {
-            if (selectedChatId && message.chatId === selectedChatId) {
-                setLocalMessages(prev => [...prev, message]);
+        socket.on("connect", handleConnect);
+
+        const extractUserIdFromData = (data: any): string | null => {
+            if (!data) return null;
+            if (typeof data === "string") return data;
+            if (data.userId) return String(data.userId);
+            if (data.id) return String(data.id);
+            if (data._id) return String(data._id);
+            return null;
+        };
+
+        const handleOnlineUsersList = (data: any) => {
+            const ids = Array.isArray(data) ? data : data?.onlineUserIds || data?.userIds || data?.data;
+            if (Array.isArray(ids)) {
+                const strIds = ids.map((id) => extractUserIdFromData(id) || String(id)).filter(Boolean) as string[];
+                setOnlineUserIds((prev) => new Set([...Array.from(prev), ...strIds]));
             }
-            // Update left sidebar chat item locally in RTK Query cache without refetching
-            dispatch(
-                chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: chatTypeFilter }, (draft) => {
-                    if (draft?.data) {
-                        const targetChat = draft.data.find(c => c._id === message.chatId);
-                        if (targetChat) {
-                            targetChat.lastMessage = message.content || "📷 Image";
-                            targetChat.lastUpdated = message.createdAt || new Date().toISOString();
+        };
+
+        const updateOnlineInCache = (userId: string, isOnline: boolean) => {
+            const targetId = String(userId);
+            ["all", "customer_support", "driver_support"].forEach((filter) => {
+                dispatch(
+                    chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
+                        if (draft?.data) {
+                            draft.data.forEach((c) => {
+                                c.participants?.forEach((p) => {
+                                    if (String(p._id) === targetId || String((p as any).id) === targetId) {
+                                        p.isOnline = isOnline;
+                                    }
+                                });
+                            });
                         }
+                    })
+                );
+            });
+        };
+
+        const handleUserStatusChanged = (data: any) => {
+            const targetId = extractUserIdFromData(data);
+            if (!targetId) return;
+            const isOnline = Boolean(data?.isOnline);
+            setOnlineUserIds((prev) => {
+                const next = new Set(prev);
+                if (isOnline) next.add(targetId);
+                else next.delete(targetId);
+                return next;
+            });
+            updateOnlineInCache(targetId, isOnline);
+        };
+
+        const handleUserOnline = (data: any) => {
+            const targetId = extractUserIdFromData(data);
+            if (!targetId) return;
+            setOnlineUserIds((prev) => {
+                const next = new Set(prev);
+                next.add(targetId);
+                return next;
+            });
+            updateOnlineInCache(targetId, true);
+        };
+
+        const handleUserOffline = (data: any) => {
+            const targetId = extractUserIdFromData(data);
+            if (!targetId) return;
+            setOnlineUserIds((prev) => {
+                const next = new Set(prev);
+                next.delete(targetId);
+                return next;
+            });
+            updateOnlineInCache(targetId, false);
+        };
+
+        const handleNewMessage = (message: ChatMessage) => {
+            const activeId = selectedChatIdRef.current;
+            if (activeId && message.chatId === activeId) {
+                setLocalMessages((prev) => {
+                    const exists = prev.some((m) => m._id === message._id);
+                    return exists ? prev : [...prev, message];
+                });
+            }
+            ["all", "customer_support", "driver_support"].forEach((filter) => {
+                dispatch(
+                    chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
+                        if (draft?.data) {
+                            const targetChat = draft.data.find((c) => c._id === message.chatId);
+                            if (targetChat) {
+                                targetChat.lastMessage = message.content || "📷 Image";
+                                targetChat.lastUpdated = message.createdAt || new Date().toISOString();
+                            }
+                        }
+                    })
+                );
+            });
+        };
+
+        const handleStatusUpdate = ({ chatId, status: newStatus }: { chatId: string; status: "open" | "resolved" }) => {
+            ["all", "customer_support", "driver_support"].forEach((filter) => {
+                dispatch(
+                    chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
+                        if (draft?.data) {
+                            const targetChat = draft.data.find((c) => c._id === chatId);
+                            if (targetChat) {
+                                targetChat.status = newStatus;
+                            }
+                        }
+                    })
+                );
+            });
+            dispatch(
+                chatApi.util.updateQueryData("getChatDetails", chatId, (draft) => {
+                    if (draft?.data) {
+                        draft.data.status = newStatus;
                     }
                 })
             );
         };
 
         const handleMessageDeleted = ({ messageId }: { messageId: string }) => {
-            setLocalMessages(prev => prev.filter(m => m._id !== messageId));
+            setLocalMessages((prev) => prev.filter((m) => m._id !== messageId));
         };
 
-        const handleTypingStart = ({ chatId }: { chatId: string }) => {
-            if (selectedChatId === chatId) setIsTyping(true);
+        const handleTypingStart = (data: any) => {
+            if (!data) return;
+            const incomingChatId = typeof data === "string" ? data : data.chatId;
+            const incomingUserId = typeof data === "object" ? data.userId : null;
+
+            if (incomingUserId && currentUserId && String(incomingUserId) === String(currentUserId)) return;
+            const activeId = selectedChatIdRef.current;
+            if (!activeId || !incomingChatId || String(incomingChatId) === String(activeId)) {
+                setIsTyping(true);
+            }
         };
 
-        const handleTypingStop = ({ chatId }: { chatId: string }) => {
-            if (selectedChatId === chatId) setIsTyping(false);
+        const handleTypingStop = (data: any) => {
+            if (!data) return;
+            const incomingChatId = typeof data === "string" ? data : data.chatId;
+            const incomingUserId = typeof data === "object" ? data.userId : null;
+
+            if (incomingUserId && currentUserId && String(incomingUserId) === String(currentUserId)) return;
+            const activeId = selectedChatIdRef.current;
+            if (!activeId || !incomingChatId || String(incomingChatId) === String(activeId)) {
+                setIsTyping(false);
+            }
         };
 
+        socket.on("onlineUsersList", handleOnlineUsersList);
+        socket.on("userStatusChanged", handleUserStatusChanged);
+        socket.on("user:online", handleUserOnline);
+        socket.on("user:offline", handleUserOffline);
         socket.on("newMessage", handleNewMessage);
         socket.on("message:new", handleNewMessage);
         socket.on("messageDeleted", handleMessageDeleted);
         socket.on("typing:start", handleTypingStart);
         socket.on("typing:stop", handleTypingStop);
+        socket.on("conversation:status", handleStatusUpdate);
+        socket.on("chatStatusUpdated", handleStatusUpdate);
 
         return () => {
+            socket.off("connect", handleConnect);
+            socket.off("onlineUsersList", handleOnlineUsersList);
+            socket.off("userStatusChanged", handleUserStatusChanged);
+            socket.off("user:online", handleUserOnline);
+            socket.off("user:offline", handleUserOffline);
             socket.off("newMessage", handleNewMessage);
             socket.off("message:new", handleNewMessage);
             socket.off("messageDeleted", handleMessageDeleted);
             socket.off("typing:start", handleTypingStart);
             socket.off("typing:stop", handleTypingStop);
+            socket.off("conversation:status", handleStatusUpdate);
+            socket.off("chatStatusUpdated", handleStatusUpdate);
         };
-    }, [selectedChatId, currentUserId, chatTypeFilter, dispatch]);
+    }, [currentUserId, dispatch]);
 
     useEffect(() => {
         if (selectedChatId) {
@@ -264,20 +468,32 @@ export default function SupportChatPage() {
         setIsTyping(false);
     }, [selectedChatId, markAsRead]);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messagesArray, isTyping]);
+    const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+        }, 80);
+    };
 
     useEffect(() => {
-        if (filteredChats.length > 0) {
-            const exists = filteredChats.some(c => c._id === selectedChatId);
-            if (!exists) {
-                setSelectedChatId(filteredChats[0]._id);
-            }
-        } else {
-            setSelectedChatId(null);
+        if (selectedChatId) {
+            scrollToBottom("auto");
         }
-    }, [filteredChats, selectedChatId]);
+    }, [selectedChatId]);
+
+    useEffect(() => {
+        scrollToBottom("smooth");
+    }, [messagesArray.length, isTyping]);
+
+    useEffect(() => {
+        if (chats.length > 0) {
+            const exists = chats.some((c) => c._id === selectedChatId);
+            if (!selectedChatId || !exists) {
+                if (chats[0]?._id) {
+                    setSelectedChatId(chats[0]._id);
+                }
+            }
+        }
+    }, [chats, selectedChatId]);
 
     // Typing emission
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -308,16 +524,30 @@ export default function SupportChatPage() {
             return;
         }
 
+        if (imagePreview) {
+            URL.revokeObjectURL(imagePreview);
+        }
+
         setSelectedImage(file);
         setImagePreview(URL.createObjectURL(file));
     };
 
     const clearSelectedImage = () => {
         setSelectedImage(null);
-        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        if (imagePreview) {
+            URL.revokeObjectURL(imagePreview);
+        }
         setImagePreview(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
+
+    useEffect(() => {
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
 
     // Send Message
     const handleSendMessage = async (e?: React.FormEvent) => {
@@ -370,8 +600,8 @@ export default function SupportChatPage() {
         }
     };
 
-    const isCurrentUser = (senderId: string) => {
-        return senderId === currentUserId;
+    const isCurrentUser = (senderId?: string) => {
+        return Boolean(senderId && currentUserId && senderId === currentUserId);
     };
 
     return (
@@ -395,27 +625,31 @@ export default function SupportChatPage() {
                         {/* Separate Inboxes: Customer Support vs Driver Support */}
                         <div className="flex rounded-2xl bg-gray-200/70 p-1 dark:bg-gray-800">
                             <button
+                                type="button"
                                 onClick={() => {
                                     setChatTypeFilter("customer_support");
                                     setSelectedChatId(null);
                                 }}
-                                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all ${chatTypeFilter === "customer_support"
+                                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all ${
+                                    chatTypeFilter === "customer_support"
                                         ? "bg-white text-emerald-600 shadow-sm dark:bg-gray-900 dark:text-emerald-400"
                                         : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
-                                    }`}
+                                }`}
                             >
                                 <MessageSquare className="h-3.5 w-3.5" />
                                 Customer
                             </button>
                             <button
+                                type="button"
                                 onClick={() => {
                                     setChatTypeFilter("driver_support");
                                     setSelectedChatId(null);
                                 }}
-                                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all ${chatTypeFilter === "driver_support"
+                                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all ${
+                                    chatTypeFilter === "driver_support"
                                         ? "bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400"
                                         : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
-                                    }`}
+                                }`}
                             >
                                 <Truck className="h-3.5 w-3.5" />
                                 Driver
@@ -434,6 +668,7 @@ export default function SupportChatPage() {
                             />
                             {searchQuery && (
                                 <button
+                                    type="button"
                                     onClick={() => setSearchQuery("")}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                                 >
@@ -445,7 +680,7 @@ export default function SupportChatPage() {
 
                     {/* Conversation List */}
                     <div className="flex-1 space-y-2 overflow-y-auto p-3">
-                        {chatsLoading || chatsFetching ? (
+                        {chatsLoading && chats.length === 0 ? (
                             Array.from({ length: 5 }).map((_, i) => (
                                 <div
                                     key={i}
@@ -473,10 +708,11 @@ export default function SupportChatPage() {
                             </div>
                         ) : (
                             filteredChats.map((chat, index) => {
-                                const participant = chat.participants?.[0];
+                                const participant = getOtherParticipant(chat);
                                 if (!participant) return null;
                                 const isSelected = chat._id === selectedChatId;
                                 const hasUnread = (chat.unreadCount || 0) > 0;
+                                const isParticipantOnline = onlineUserIds.has(String(participant._id)) || Boolean(participant.isOnline);
 
                                 return (
                                     <motion.button
@@ -486,19 +722,26 @@ export default function SupportChatPage() {
                                         animate="visible"
                                         transition={{ delay: index * 0.03 }}
                                         onClick={() => setSelectedChatId(chat._id)}
-                                        className={`relative w-full overflow-hidden rounded-2xl border p-3 text-left transition-all duration-200 ${isSelected
+                                        className={`relative w-full overflow-hidden rounded-2xl border p-3 text-left transition-all duration-200 ${
+                                            isSelected
                                                 ? "border-emerald-500/50 bg-emerald-50/70 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/30"
                                                 : "border-transparent hover:border-gray-200 hover:bg-white hover:shadow-sm dark:hover:border-gray-800 dark:hover:bg-gray-900"
-                                            }`}
+                                        }`}
                                     >
                                         <div className="flex items-start gap-3">
                                             <div className="relative shrink-0">
                                                 <div className="relative h-10 w-10">
                                                     <Image
                                                         src={getAvatarUrl(participant)}
-                                                        alt={participant.name}
+                                                        alt={participant.name || "User"}
                                                         fill
                                                         className="rounded-full object-cover border border-white dark:border-gray-700"
+                                                    />
+                                                    <span
+                                                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
+                                                            isParticipantOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+                                                        }`}
+                                                        title={isParticipantOnline ? "Online" : "Offline"}
                                                     />
                                                 </div>
                                                 {chat.chatType === "driver_support" && (
@@ -537,7 +780,7 @@ export default function SupportChatPage() {
                 </motion.aside>
 
                 {/* Main Chat Area */}
-                <div className="flex min-w-0 flex-col border-r border-gray-100 dark:border-gray-800">
+                <div className="flex h-full min-w-0 flex-col overflow-hidden border-r border-gray-100 dark:border-gray-800">
                     {/* Header */}
                     <motion.div
                         variants={itemVariants}
@@ -549,9 +792,15 @@ export default function SupportChatPage() {
                                     <div className="relative h-10 w-10 shrink-0">
                                         <Image
                                             src={selectedContact.avatar}
-                                            alt={selectedContact.name}
+                                            alt={selectedContact.name || "User"}
                                             fill
                                             className="rounded-full object-cover border-2 border-emerald-100 dark:border-emerald-900"
+                                        />
+                                        <span
+                                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
+                                                selectedContact.isOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+                                            }`}
+                                            title={selectedContact.isOnline ? "Online" : "Offline"}
                                         />
                                     </div>
                                     <div className="min-w-0">
@@ -559,11 +808,20 @@ export default function SupportChatPage() {
                                             <h3 className="truncate font-bold text-gray-900 dark:text-white text-base">
                                                 {selectedContact.name}
                                             </h3>
-                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase ${selectedContact.role === "driver"
+                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase ${
+                                                selectedContact.role === "driver"
                                                     ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200"
                                                     : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200"
-                                                }`}>
+                                            }`}>
                                                 {selectedContact.role}
+                                            </span>
+                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1 ${
+                                                selectedContact.isOnline
+                                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                                                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                                            }`}>
+                                                <span className={`h-1.5 w-1.5 rounded-full ${selectedContact.isOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
+                                                {selectedContact.isOnline ? "Online" : "Offline"}
                                             </span>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -574,6 +832,42 @@ export default function SupportChatPage() {
                                             )}
                                         </p>
                                     </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1.5 ${
+                                        selectedContact.status === "resolved"
+                                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                    }`}>
+                                        <span className={`h-2 w-2 rounded-full ${selectedContact.status === "resolved" ? "bg-purple-500" : "bg-emerald-500 animate-pulse"}`} />
+                                        {selectedContact.status}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleStatus}
+                                        disabled={updatingStatus}
+                                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                                            selectedContact.status === "resolved"
+                                                ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                                                : "bg-purple-600 hover:bg-purple-700 text-white"
+                                        }`}
+                                    >
+                                        {updatingStatus ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : selectedContact.status === "resolved" ? (
+                                            <>
+                                                <RotateCcw className="h-3.5 w-3.5" />
+                                                Reopen
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                                Resolve
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </div>
                         ) : (
@@ -587,7 +881,7 @@ export default function SupportChatPage() {
                     <div className="flex-1 overflow-y-auto bg-gray-50/40 px-4 py-6 dark:bg-gray-950/20 md:px-6">
                         {selectedContact ? (
                             <div className="mx-auto max-w-4xl space-y-5">
-                                {messagesLoading || messagesFetching ? (
+                                {messagesLoading && messagesArray.length === 0 ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                         <div
                                             key={i}
@@ -608,7 +902,14 @@ export default function SupportChatPage() {
                                 ) : (
                                     <AnimatePresence mode="popLayout">
                                         {messagesArray.map((msg) => {
-                                            const fromMe = isCurrentUser(msg.sender._id);
+                                            const fromMe = isCurrentUser(msg.sender?._id);
+                                            const imageUrl = cleanImageUrl(msg.image?.url);
+                                            const isImageMsg = msg.type === "image" && Boolean(imageUrl);
+                                            const hasTextContent = Boolean(msg.content && msg.content !== "📷 Image");
+                                            const senderAvatar = fromMe
+                                                ? adminAvatar
+                                                : (selectedContact?.avatar || getAvatarUrl(msg.sender));
+
                                             return (
                                                 <motion.div
                                                     key={msg._id}
@@ -617,28 +918,48 @@ export default function SupportChatPage() {
                                                     animate="visible"
                                                     exit="hidden"
                                                     layout
-                                                    className={`flex ${fromMe ? "justify-end" : "justify-start"}`}
+                                                    className={`flex items-end gap-2.5 ${fromMe ? "justify-end" : "justify-start"}`}
                                                 >
-                                                    <div className="max-w-[85%] md:max-w-2xl group relative">
+                                                    {!fromMe && (
+                                                        <div className="relative h-8 w-8 shrink-0 mb-5">
+                                                            <Image
+                                                                src={senderAvatar}
+                                                                alt={msg.sender?.name || "User"}
+                                                                fill
+                                                                className="rounded-full object-cover border border-gray-200 shadow-xs dark:border-gray-700"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    <div className="max-w-[80%] md:max-w-xl group relative">
                                                         <motion.div
                                                             whileHover={{ y: -1, transition: { duration: 0.2 } }}
-                                                            className={`relative rounded-3xl px-5 py-4 shadow-sm transition-all duration-300 ${fromMe
+                                                            className={`relative rounded-3xl shadow-sm transition-all duration-300 ${
+                                                                isImageMsg && !hasTextContent ? "p-1.5" : "px-5 py-4"
+                                                            } ${
+                                                                fromMe
                                                                     ? "rounded-br-lg bg-emerald-500 text-white shadow-emerald-500/20"
                                                                     : "rounded-bl-lg border border-gray-100 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                                                                }`}
+                                                            }`}
                                                         >
-                                                            {msg.type === "image" && msg.image?.url && (
-                                                                <div className="mb-2 overflow-hidden rounded-2xl max-w-sm">
+                                                            {isImageMsg && (
+                                                                <div
+                                                                    onClick={() => setPreviewImageUrl(imageUrl)}
+                                                                    className={`group/img relative overflow-hidden rounded-2xl max-w-sm max-h-80 cursor-pointer border border-black/10 dark:border-white/10 ${hasTextContent ? "mb-2" : "mb-0"}`}
+                                                                >
                                                                     <Image
-                                                                        src={cleanImageUrl(msg.image.url)}
+                                                                        src={imageUrl}
                                                                         alt="Message image attachment"
                                                                         width={350}
                                                                         height={260}
-                                                                        className="w-full h-auto object-cover rounded-2xl"
+                                                                        className="w-full h-auto max-h-80 object-cover rounded-2xl transition-transform duration-300 group-hover/img:scale-105"
                                                                     />
+                                                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                                                        <Maximize2 className="h-6 w-6" />
+                                                                    </div>
                                                                 </div>
                                                             )}
-                                                            {msg.content && (
+                                                            {hasTextContent && (
                                                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">
                                                                     {renderTextWithLinks(msg.content)}
                                                                 </p>
@@ -652,6 +973,7 @@ export default function SupportChatPage() {
                                                             {fromMe && (
                                                                 <div className="flex items-center gap-1">
                                                                     <button
+                                                                        type="button"
                                                                         onClick={() => handleDeleteClick(msg._id)}
                                                                         className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-0.5"
                                                                         title="Delete message"
@@ -667,6 +989,17 @@ export default function SupportChatPage() {
                                                             )}
                                                         </div>
                                                     </div>
+
+                                                    {fromMe && (
+                                                        <div className="relative h-8 w-8 shrink-0 mb-5">
+                                                            <Image
+                                                                src={senderAvatar}
+                                                                alt={adminProfile?.name || currentUser?.name || "Admin"}
+                                                                fill
+                                                                className="rounded-full object-cover border border-emerald-300 shadow-xs dark:border-emerald-700"
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </motion.div>
                                             );
                                         })}
@@ -773,7 +1106,7 @@ export default function SupportChatPage() {
                                 <div className="relative mx-auto h-20 w-20">
                                     <Image
                                         src={selectedContact.avatar}
-                                        alt={selectedContact.name}
+                                        alt={selectedContact.name || "User"}
                                         fill
                                         className="rounded-full object-cover border-4 border-white shadow-sm dark:border-gray-800"
                                     />
@@ -818,6 +1151,38 @@ export default function SupportChatPage() {
                                     <p className="text-xs text-gray-400 italic">No active order history found.</p>
                                 )}
                             </div>
+
+                            {/* Shared Media Gallery */}
+                            <div className="space-y-3 pt-2">
+                                <div className="flex items-center justify-between">
+                                    <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                                        Shared Media ({messagesArray.filter(m => m.type === "image" && m.image?.url).length})
+                                    </h5>
+                                </div>
+                                {messagesArray.filter(m => m.type === "image" && m.image?.url).length > 0 ? (
+                                    <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
+                                        {messagesArray.filter(m => m.type === "image" && m.image?.url).map((msg) => {
+                                            const imageUrl = cleanImageUrl(msg.image?.url);
+                                            return (
+                                                <div
+                                                    key={msg._id}
+                                                    onClick={() => setPreviewImageUrl(imageUrl)}
+                                                    className="relative aspect-square overflow-hidden rounded-xl cursor-pointer border border-gray-200 dark:border-gray-800 hover:opacity-90 transition-opacity"
+                                                >
+                                                    <Image
+                                                        src={imageUrl}
+                                                        alt="Shared media attachment"
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-400 italic">No media shared in this chat.</p>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="text-center text-xs text-gray-400 py-10">
@@ -843,6 +1208,7 @@ export default function SupportChatPage() {
                                         Delete Message
                                     </h3>
                                     <button
+                                        type="button"
                                         onClick={() => setDeleteModalOpen(false)}
                                         className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                                     >
@@ -854,12 +1220,14 @@ export default function SupportChatPage() {
                                 </p>
                                 <div className="flex gap-3">
                                     <button
+                                        type="button"
                                         onClick={() => setDeleteModalOpen(false)}
                                         className="flex-1 px-5 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={handleConfirmDelete}
                                         disabled={deletingMessage}
                                         className="flex-1 flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl transition-colors"
@@ -874,6 +1242,37 @@ export default function SupportChatPage() {
                                         )}
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Image Preview Modal */}
+            <AnimatePresence>
+                {previewImageUrl && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setPreviewImageUrl(null)}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center p-2"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setPreviewImageUrl(null)}
+                                className="absolute top-4 right-4 z-10 p-2.5 bg-black/60 hover:bg-black text-white rounded-full transition-colors"
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+                            <div className="relative w-full h-full max-h-[85vh]">
+                                <Image
+                                    src={previewImageUrl}
+                                    alt="Enlarged attachment"
+                                    fill
+                                    className="object-contain rounded-2xl"
+                                />
                             </div>
                         </motion.div>
                     </div>
