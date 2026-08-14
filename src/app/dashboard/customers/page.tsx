@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { Search, Filter, Download, ChevronLeft, ChevronRight, Mail, MapPin, ShieldCheck, ShieldAlert, UserCheck, UserX, Calendar, Users, Loader2, FileText, FileSpreadsheet, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetUsersQuery, useToggleUserStatusMutation } from "@/redux/features/user/userApi";
@@ -27,11 +29,10 @@ function CustomStatusDropdown({ currentStatus, onStatusChange, isLoading }: { cu
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={isLoading}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
-                    currentStatus
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${currentStatus
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
                         : "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20"
-                }`}
+                    }`}
             >
                 {isLoading ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -54,11 +55,10 @@ function CustomStatusDropdown({ currentStatus, onStatusChange, isLoading }: { cu
                             onStatusChange(true);
                             setIsOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                            currentStatus
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${currentStatus
                                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
                                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
+                            }`}
                     >
                         <UserCheck className="h-4 w-4" />
                         Active
@@ -68,11 +68,10 @@ function CustomStatusDropdown({ currentStatus, onStatusChange, isLoading }: { cu
                             onStatusChange(false);
                             setIsOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                            !currentStatus
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${!currentStatus
                                 ? "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400"
                                 : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
+                            }`}
                     >
                         <UserX className="h-4 w-4" />
                         Inactive
@@ -130,6 +129,7 @@ export default function CustomersPage() {
     const [toggleUserStatus, { isLoading: isUpdatingStatus }] = useToggleUserStatusMutation();
 
     const users = usersData?.data || [];
+    const onlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
     const pagination = usersData?.pagination;
     const totalPages = pagination?.totalPages || 0;
 
@@ -348,7 +348,7 @@ export default function CustomersPage() {
                                     >
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
-                                                <div className="relative h-12 w-12 flex-shrink-0">
+                                                <div className="relative h-12 w-12 shrink-0">
                                                     {user.avatar?.url ? (
                                                         <Image
                                                             src={cleanImageUrl(user.avatar.url)}
@@ -384,7 +384,7 @@ export default function CustomersPage() {
                                             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                                 <MapPin className="h-3.5 w-3.5" />
                                                 <span className="text-sm">
-                                                    {user.location?.city || user.location?.country 
+                                                    {user.location?.city || user.location?.country
                                                         ? `${user.location.city}${user.location.city && user.location.country ? ", " : ""}${user.location.country}`
                                                         : "N/A"}
                                                 </span>
@@ -435,7 +435,7 @@ export default function CustomersPage() {
                 {/* Mobile Cards */}
                 <div className="space-y-4 p-4 lg:hidden">
                     {isLoading || isFetching ? (
-                         Array.from({ length: 3 }).map((_, i) => (
+                        Array.from({ length: 3 }).map((_, i) => (
                             <div key={i} className="animate-pulse rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
                                 <div className="flex gap-4">
                                     <div className="h-14 w-14 rounded-2xl bg-gray-200 dark:bg-gray-800" />
@@ -445,7 +445,7 @@ export default function CustomersPage() {
                                     </div>
                                 </div>
                             </div>
-                         ))
+                        ))
                     ) : users.length > 0 ? (
                         users.map((user) => (
                             <motion.div
@@ -458,7 +458,7 @@ export default function CustomersPage() {
                                 className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm cursor-pointer transition-all"
                             >
                                 <div className="flex items-start gap-4">
-                                    <div className="relative h-14 w-14 flex-shrink-0">
+                                    <div className="relative h-14 w-14 shrink-0">
                                         {user.avatar?.url ? (
                                             <Image
                                                 src={cleanImageUrl(user.avatar.url)}
@@ -474,21 +474,21 @@ export default function CustomersPage() {
                                     </div>
 
                                     <div className="min-w-0 flex-1">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                                                        {user.name}
-                                                    </h3>
-                                                    <p className="truncate text-sm text-gray-500">
-                                                        {user.email}
-                                                    </p>
-                                                </div>
-                                                <CustomStatusDropdown
-                                                    currentStatus={user.isActive}
-                                                    onStatusChange={(newStatus) => handleUpdateStatus(user._id, newStatus)}
-                                                    isLoading={isUpdatingStatus}
-                                                />
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                                                    {user.name}
+                                                </h3>
+                                                <p className="truncate text-sm text-gray-500">
+                                                    {user.email}
+                                                </p>
                                             </div>
+                                            <CustomStatusDropdown
+                                                currentStatus={user.isActive}
+                                                onStatusChange={(newStatus) => handleUpdateStatus(user._id, newStatus)}
+                                                isLoading={isUpdatingStatus}
+                                            />
+                                        </div>
 
                                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                             <div>
@@ -506,7 +506,7 @@ export default function CustomersPage() {
                                             <div className="col-span-2">
                                                 <p className="text-gray-500 text-xs">Location</p>
                                                 <p className="font-semibold text-gray-900 dark:text-white truncate">
-                                                    {user.location?.city || user.location?.country 
+                                                    {user.location?.city || user.location?.country
                                                         ? `${user.location.city}${user.location.city && user.location.country ? ", " : ""}${user.location.country}`
                                                         : "N/A"}
                                                 </p>
@@ -555,7 +555,7 @@ export default function CustomersPage() {
                                 .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
                                 .map((p, i, arr) => (
                                     <div key={p} className="flex items-center gap-2">
-                                        {i > 0 && arr[i-1] !== p - 1 && <span className="text-gray-400">...</span>}
+                                        {i > 0 && arr[i - 1] !== p - 1 && <span className="text-gray-400">...</span>}
                                         <button
                                             onClick={() => setPage(p)}
                                             disabled={isFetching}

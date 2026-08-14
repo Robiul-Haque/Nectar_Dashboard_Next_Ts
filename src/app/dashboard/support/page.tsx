@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, Send, Paperclip, CheckCheck, Loader2, Trash2, X, MessageSquare, Truck, CheckCircle2, RotateCcw, Maximize2 } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
@@ -13,28 +15,57 @@ import { useAppDispatch } from "@/redux/hook";
 import { useGetAdminProfileQuery } from "@/redux/features/user/userApi";
 import { getSocket, initializeSocket } from "@/lib/socket";
 
-// Helper Functions
+// Telegram/Messenger Style Date & Time Helpers
 const formatLastUpdated = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m`;
-    if (diffHours < 24) return `${diffHours}h`;
-    if (diffDays < 7) return `${diffDays}d`;
+    const isToday = date.toDateString() === now.toDateString();
+    if (isToday) {
+        return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    }
 
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+        return "Yesterday";
+    }
+
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 7) {
+        return date.toLocaleDateString("en-US", { weekday: "short" });
+    }
+
+    const isThisYear = date.getFullYear() === now.getFullYear();
+    if (isThisYear) {
+        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+
+    return date.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "2-digit" });
 };
 
 const formatMessageTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+};
+
+const formatMessageDateDivider = (dateString?: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    const now = new Date();
+
+    if (date.toDateString() === now.toDateString()) return "Today";
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+    return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 };
 
 const cleanImageUrl = (url?: string | null) => {
@@ -111,7 +142,8 @@ export default function SupportChatPage() {
     const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-    const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+    // Online presence state comes directly from Redux presenceSlice
+    const reduxOnlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
     const selectedChatIdRef = useRef<string | null>(selectedChatId);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -182,19 +214,7 @@ export default function SupportChatPage() {
         [currentUserId]
     );
 
-    // Seed online user IDs from initial chat query data
-    useEffect(() => {
-        if (chats.length > 0) {
-            const initialOnlineIds = new Set<string>();
-            chats.forEach((chat) => {
-                const p = getOtherParticipant(chat);
-                if (p && p.isOnline) initialOnlineIds.add(String(p._id));
-            });
-            if (initialOnlineIds.size > 0) {
-                setOnlineUserIds((prev) => new Set([...Array.from(prev), ...Array.from(initialOnlineIds)]));
-            }
-        }
-    }, [chats, getOtherParticipant]);
+
 
     const filteredChats = useMemo(() => {
         if (!searchQuery.trim()) return chats;
@@ -230,7 +250,8 @@ export default function SupportChatPage() {
         const participant = getOtherParticipant(selectedChat);
         if (!participant) return null;
 
-        const isOnline = onlineUserIds.has(String(participant._id)) || Boolean(participant.isOnline);
+        const pId = String(participant._id || (participant as any).id || "");
+        const isOnline = Boolean(pId && reduxOnlineUserIds.some((id) => String(id) === pId));
 
         return {
             id: selectedChat._id,
@@ -245,7 +266,7 @@ export default function SupportChatPage() {
             time: formatLastUpdated(selectedChat.lastUpdated),
             isOnline,
         };
-    }, [selectedChat, onlineUserIds, getOtherParticipant]);
+    }, [selectedChat, reduxOnlineUserIds, getOtherParticipant]);
 
     const relatedOrder = chatDetailsRes?.data?.relatedOrder;
 
@@ -283,90 +304,36 @@ export default function SupportChatPage() {
 
         socket.on("connect", handleConnect);
 
-        const extractUserIdFromData = (data: any): string | null => {
-            if (!data) return null;
-            if (typeof data === "string") return data;
-            if (data.userId) return String(data.userId);
-            if (data.id) return String(data.id);
-            if (data._id) return String(data._id);
-            return null;
-        };
 
-        const handleOnlineUsersList = (data: any) => {
-            const ids = Array.isArray(data) ? data : data?.onlineUserIds || data?.userIds || data?.data;
-            if (Array.isArray(ids)) {
-                const strIds = ids.map((id) => extractUserIdFromData(id) || String(id)).filter(Boolean) as string[];
-                setOnlineUserIds((prev) => new Set([...Array.from(prev), ...strIds]));
-            }
-        };
-
-        const updateOnlineInCache = (userId: string, isOnline: boolean) => {
-            const targetId = String(userId);
-            ["all", "customer_support", "driver_support"].forEach((filter) => {
-                dispatch(
-                    chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
-                        if (draft?.data) {
-                            draft.data.forEach((c) => {
-                                c.participants?.forEach((p) => {
-                                    if (String(p._id) === targetId || String((p as any).id) === targetId) {
-                                        p.isOnline = isOnline;
-                                    }
-                                });
-                            });
-                        }
-                    })
-                );
-            });
-        };
-
-        const handleUserStatusChanged = (data: any) => {
-            const targetId = extractUserIdFromData(data);
-            if (!targetId) return;
-            const isOnline = Boolean(data?.isOnline);
-            setOnlineUserIds((prev) => {
-                const next = new Set(prev);
-                if (isOnline) next.add(targetId);
-                else next.delete(targetId);
-                return next;
-            });
-            updateOnlineInCache(targetId, isOnline);
-        };
-
-        const handleUserOnline = (data: any) => {
-            const targetId = extractUserIdFromData(data);
-            if (!targetId) return;
-            setOnlineUserIds((prev) => {
-                const next = new Set(prev);
-                next.add(targetId);
-                return next;
-            });
-            updateOnlineInCache(targetId, true);
-        };
-
-        const handleUserOffline = (data: any) => {
-            const targetId = extractUserIdFromData(data);
-            if (!targetId) return;
-            setOnlineUserIds((prev) => {
-                const next = new Set(prev);
-                next.delete(targetId);
-                return next;
-            });
-            updateOnlineInCache(targetId, false);
-        };
 
         const handleNewMessage = (message: ChatMessage) => {
+            if (!message || !message._id) return;
             const activeId = selectedChatIdRef.current;
-            if (activeId && message.chatId === activeId) {
+            const msgChatId = String(message.chatId || "");
+
+            if (activeId && msgChatId === String(activeId)) {
                 setLocalMessages((prev) => {
                     const exists = prev.some((m) => m._id === message._id);
                     return exists ? prev : [...prev, message];
                 });
             }
+
+            dispatch(
+                chatApi.util.updateQueryData("getMessages", { chatId: msgChatId }, (draft) => {
+                    if (Array.isArray(draft)) {
+                        const exists = draft.some((m) => m._id === message._id);
+                        if (!exists) {
+                            draft.push(message);
+                        }
+                    }
+                })
+            );
+
             ["all", "customer_support", "driver_support"].forEach((filter) => {
                 dispatch(
                     chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
                         if (draft?.data) {
-                            const targetChat = draft.data.find((c) => c._id === message.chatId);
+                            const targetChat = draft.data.find((c) => String(c._id) === msgChatId);
                             if (targetChat) {
                                 targetChat.lastMessage = message.content || "📷 Image";
                                 targetChat.lastUpdated = message.createdAt || new Date().toISOString();
@@ -427,10 +394,6 @@ export default function SupportChatPage() {
             }
         };
 
-        socket.on("onlineUsersList", handleOnlineUsersList);
-        socket.on("userStatusChanged", handleUserStatusChanged);
-        socket.on("user:online", handleUserOnline);
-        socket.on("user:offline", handleUserOffline);
         socket.on("newMessage", handleNewMessage);
         socket.on("message:new", handleNewMessage);
         socket.on("messageDeleted", handleMessageDeleted);
@@ -441,10 +404,6 @@ export default function SupportChatPage() {
 
         return () => {
             socket.off("connect", handleConnect);
-            socket.off("onlineUsersList", handleOnlineUsersList);
-            socket.off("userStatusChanged", handleUserStatusChanged);
-            socket.off("user:online", handleUserOnline);
-            socket.off("user:offline", handleUserOffline);
             socket.off("newMessage", handleNewMessage);
             socket.off("message:new", handleNewMessage);
             socket.off("messageDeleted", handleMessageDeleted);
@@ -456,16 +415,25 @@ export default function SupportChatPage() {
     }, [currentUserId, dispatch]);
 
     useEffect(() => {
-        if (selectedChatId) {
-            const socket = getSocket();
-            if (socket) {
-                socket.emit("joinRoom", { chatId: selectedChatId });
-                socket.emit("conversation:join", { chatId: selectedChatId });
-            }
+        const socket = getSocket();
+        const prevChatId = selectedChatIdRef.current;
+
+        if (socket && prevChatId && prevChatId !== selectedChatId) {
+            socket.emit("leaveRoom", { chatId: prevChatId });
+        }
+
+        if (socket && selectedChatId) {
+            socket.emit("joinRoom", { chatId: selectedChatId });
             markAsRead(selectedChatId).catch(() => { });
         }
         setLocalMessages([]);
         setIsTyping(false);
+
+        return () => {
+            if (socket && selectedChatId) {
+                socket.emit("leaveRoom", { chatId: selectedChatId });
+            }
+        };
     }, [selectedChatId, markAsRead]);
 
     const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
@@ -497,14 +465,20 @@ export default function SupportChatPage() {
 
     // Typing emission
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setInput(e.target.value);
+        const val = e.target.value;
+        setInput(val);
         const socket = getSocket();
         if (socket && selectedChatId) {
-            socket.emit("typing:start", { chatId: selectedChatId });
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            typingTimeoutRef.current = setTimeout(() => {
+            if (val.trim().length > 0) {
+                socket.emit("typing:start", { chatId: selectedChatId });
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => {
+                    socket.emit("typing:stop", { chatId: selectedChatId });
+                }, 2000);
+            } else {
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                 socket.emit("typing:stop", { chatId: selectedChatId });
-            }, 2000);
+            }
         }
     };
 
@@ -712,7 +686,7 @@ export default function SupportChatPage() {
                                 if (!participant) return null;
                                 const isSelected = chat._id === selectedChatId;
                                 const hasUnread = (chat.unreadCount || 0) > 0;
-                                const isParticipantOnline = onlineUserIds.has(String(participant._id)) || Boolean(participant.isOnline);
+                                const isParticipantOnline = Boolean(participant && reduxOnlineUserIds.includes(String(participant._id || (participant as any).id)));
 
                                 return (
                                     <motion.button
@@ -808,21 +782,6 @@ export default function SupportChatPage() {
                                             <h3 className="truncate font-bold text-gray-900 dark:text-white text-base">
                                                 {selectedContact.name}
                                             </h3>
-                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase ${
-                                                selectedContact.role === "driver"
-                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200"
-                                                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200"
-                                            }`}>
-                                                {selectedContact.role}
-                                            </span>
-                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1 ${
-                                                selectedContact.isOnline
-                                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
-                                                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                                            }`}>
-                                                <span className={`h-1.5 w-1.5 rounded-full ${selectedContact.isOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
-                                                {selectedContact.isOnline ? "Online" : "Offline"}
-                                            </span>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                             {isTyping ? (
@@ -878,9 +837,9 @@ export default function SupportChatPage() {
                     </motion.div>
 
                     {/* Messages Window */}
-                    <div className="flex-1 overflow-y-auto bg-gray-50/40 px-4 py-6 dark:bg-gray-950/20 md:px-6">
+                    <div className="flex-1 overflow-y-auto bg-gray-50/40 px-3 py-3.5 dark:bg-gray-950/20 md:px-4">
                         {selectedContact ? (
-                            <div className="mx-auto max-w-4xl space-y-5">
+                            <div className="mx-auto max-w-4xl space-y-2.5">
                                 {messagesLoading && messagesArray.length === 0 ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                         <div
@@ -901,7 +860,9 @@ export default function SupportChatPage() {
                                     </div>
                                 ) : (
                                     <AnimatePresence mode="popLayout">
-                                        {messagesArray.map((msg) => {
+                                        {messagesArray.map((msg, index) => {
+                                            const prevMsg = index > 0 ? messagesArray[index - 1] : null;
+                                            const showDateDivider = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
                                             const fromMe = isCurrentUser(msg.sender?._id);
                                             const imageUrl = cleanImageUrl(msg.image?.url);
                                             const isImageMsg = msg.type === "image" && Boolean(imageUrl);
@@ -911,9 +872,16 @@ export default function SupportChatPage() {
                                                 : (selectedContact?.avatar || getAvatarUrl(msg.sender));
 
                                             return (
-                                                <motion.div
-                                                    key={msg._id}
-                                                    variants={messageVariants}
+                                                <React.Fragment key={msg._id}>
+                                                    {showDateDivider && (
+                                                        <div className="flex justify-center my-3">
+                                                            <span className="bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[11px] font-bold px-3 py-0.5 rounded-full shadow-2xs">
+                                                                {formatMessageDateDivider(msg.createdAt)}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <motion.div
+                                                        variants={messageVariants}
                                                     initial="hidden"
                                                     animate="visible"
                                                     exit="hidden"
@@ -970,23 +938,21 @@ export default function SupportChatPage() {
                                                             <span className="text-[10px] text-gray-400">
                                                                 {formatMessageTime(msg.createdAt)}
                                                             </span>
-                                                            {fromMe && (
-                                                                <div className="flex items-center gap-1">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleDeleteClick(msg._id)}
-                                                                        className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-0.5"
-                                                                        title="Delete message"
-                                                                    >
-                                                                        {deletingMessage && messageToDelete === msg._id ? (
-                                                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                                                        ) : (
-                                                                            <Trash2 className="h-3 w-3" />
-                                                                        )}
-                                                                    </button>
-                                                                    <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />
-                                                                </div>
-                                                            )}
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteClick(msg._id)}
+                                                                    className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-0.5"
+                                                                    title="Delete message"
+                                                                >
+                                                                    {deletingMessage && messageToDelete === msg._id ? (
+                                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    ) : (
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                    )}
+                                                                </button>
+                                                                {fromMe && <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />}
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -1001,6 +967,7 @@ export default function SupportChatPage() {
                                                         </div>
                                                     )}
                                                 </motion.div>
+                                                </React.Fragment>
                                             );
                                         })}
                                     </AnimatePresence>

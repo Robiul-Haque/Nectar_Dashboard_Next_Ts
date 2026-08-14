@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import {
-    X, User, Mail, MapPin, ShieldCheck, ShieldAlert, UserCheck, UserX,
-    Calendar, Smartphone, Globe, ShoppingBag, Heart, ShoppingCart,
+    X, MapPin, ShieldCheck, ShieldAlert, UserCheck, UserX,
+    Smartphone, ShoppingBag, Heart, ShoppingCart,
     MessageSquare, Clock, History, AlertCircle, Edit2, Trash2, Plus,
-    Loader2, Key, CheckCircle, Info, ExternalLink, ChevronLeft, ChevronRight, Lock, Unlock
+    Loader2, Info, ExternalLink, ChevronLeft, ChevronRight, Lock, Unlock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -33,6 +35,7 @@ interface CustomerDetailsDrawerProps {
 type TabType = "overview" | "orders" | "wishlist-cart" | "activity" | "notes";
 
 export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: CustomerDetailsDrawerProps) {
+    const onlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
     const [activeTab, setActiveTab] = useState<TabType>("overview");
 
     // Pagination states for different tabs
@@ -243,7 +246,7 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                 <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs dark:border-gray-800 dark:bg-gray-900">
                                     <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="flex items-center gap-4">
-                                            <div className="relative h-20 w-20 flex-shrink-0">
+                                            <div className="relative h-20 w-20 shrink-0">
                                                 {profile.avatar ? (
                                                     <Image
                                                         src={cleanImageUrl(profile.avatar)}
@@ -262,6 +265,19 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{profile.name}</h3>
                                                 <p className="text-sm text-gray-500">{profile.email}</p>
                                                 <div className="mt-2 flex flex-wrap gap-2">
+                                                    {(() => {
+                                                        const isOnline = Boolean(customerId && onlineUserIds.includes(String(customerId)));
+                                                        return (
+                                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
+                                                                isOnline
+                                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                                                    : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+                                                            }`}>
+                                                                <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
+                                                                {isOnline ? "ONLINE" : "OFFLINE"}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
                                                         status?.isActive
                                                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
@@ -300,7 +316,7 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                     {security?.isLocked && (
                                         <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-rose-100 bg-rose-50/50 p-4 dark:border-rose-955/40 dark:bg-rose-955/20">
                                             <div className="flex items-start gap-3">
-                                                <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
+                                                <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-semibold text-rose-800 dark:text-rose-300">Account Temporarily Locked</p>
                                                     <p className="text-xs text-rose-600 dark:text-rose-400 mt-0.5">
@@ -595,7 +611,7 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                 {wishlistCartData.data.wishlist.items.map((item, idx) => (
                                                                     <div key={idx} className="flex items-center gap-3 rounded-2xl border border-gray-50 p-3 dark:border-gray-800">
-                                                                        <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-gray-50 flex-shrink-0">
+                                                                        <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-gray-50 shrink-0">
                                                                             {item.image ? (
                                                                                 <Image
                                                                                     src={cleanImageUrl(item.image)}

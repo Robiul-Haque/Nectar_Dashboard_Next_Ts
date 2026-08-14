@@ -1,6 +1,7 @@
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { getCookie, setCookie } from "./cookies";
+import { store } from "@/redux/store";
 
 const getSocketUrl = (): string => {
   const envUrl =
@@ -10,6 +11,37 @@ const getSocketUrl = (): string => {
     "http://localhost:8010";
 
   return envUrl.replace(/\/api\/v1\/?$/, "");
+};
+
+export const getAuthToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+
+  // 1. Check Cookie
+  const cookieToken = getCookie("accessToken") || getCookie("token");
+  if (cookieToken && cookieToken.trim()) return cookieToken.trim();
+
+  // 2. Check Redux Store
+  try {
+    const stateToken = store?.getState()?.auth?.accessToken;
+    if (stateToken && stateToken.trim()) return stateToken.trim();
+  } catch (e) {}
+
+  // 3. Check LocalStorage
+  try {
+    const rawToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
+    if (rawToken && rawToken.trim()) return rawToken.trim();
+
+    const persistRoot = localStorage.getItem("persist:root");
+    if (persistRoot) {
+      const parsed = JSON.parse(persistRoot);
+      const auth = typeof parsed.auth === "string" ? JSON.parse(parsed.auth) : parsed.auth;
+      if (auth?.accessToken && typeof auth.accessToken === "string" && auth.accessToken.trim()) {
+        return auth.accessToken.trim();
+      }
+    }
+  } catch (e) {}
+
+  return null;
 };
 
 let socket: Socket | null = null;
@@ -42,7 +74,7 @@ const refreshDashboardToken = async (): Promise<string | null> => {
 };
 
 export const initializeSocket = () => {
-  const token = getCookie("accessToken") || getCookie("token");
+  const token = getAuthToken();
   if (!token) {
     return null;
   }
@@ -92,8 +124,7 @@ export const initializeSocket = () => {
     if (isAuthError) {
       const freshToken =
         (await refreshDashboardToken()) ||
-        getCookie("accessToken") ||
-        getCookie("token");
+        getAuthToken();
 
       if (freshToken && socket) {
         socket.auth = { token: `Bearer ${freshToken}` };
@@ -123,4 +154,3 @@ export const disconnectSocket = () => {
     socket = null;
   }
 };
-

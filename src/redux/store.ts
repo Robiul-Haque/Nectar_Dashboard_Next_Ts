@@ -10,6 +10,7 @@ import {
 import storage from "./storage";
 
 import authReducer from "./features/auth/authSlice";
+import presenceReducer from "./features/presence/presenceSlice";
 
 import { baseApi } from "./api/baseApi";
 
@@ -30,6 +31,7 @@ export const store =
     configureStore({
         reducer: {
             auth: persistedAuthReducer,
+            presence: presenceReducer,
 
             [baseApi.reducerPath]:
                 baseApi.reducer,
