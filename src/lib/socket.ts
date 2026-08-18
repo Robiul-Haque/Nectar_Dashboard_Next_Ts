@@ -99,10 +99,11 @@ export const initializeSocket = () => {
     extraHeaders: {
       authorization: `Bearer ${token}`,
     },
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
+    withCredentials: true,
     reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000,
   });
 
   socket.on("connect", () => {

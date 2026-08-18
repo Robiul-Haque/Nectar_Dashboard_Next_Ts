@@ -1,9 +1,8 @@
 "use client";
 
 import React from "react";
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Send, Paperclip, CheckCheck, Loader2, Trash2, X, MessageSquare, Truck, CheckCircle2, RotateCcw, Maximize2 } from "lucide-react";
+import { Search, Send, Paperclip, Check, CheckCheck, Loader2, Trash2, X, MessageSquare, Truck, CheckCircle2, RotateCcw, Maximize2 } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useGetChatsQuery, useGetChatDetailsQuery, useGetMessagesQuery, useSendMessageMutation, useMarkAsReadMutation, useDeleteMessageMutation, useUpdateChatStatusMutation, chatApi } from "@/redux/features/chat/chatApi";
 import type { Chat, Message as ChatMessage, Participant } from "@/redux/features/chat/chatTypes";
@@ -164,7 +163,7 @@ export default function SupportChatPage() {
         chatType: chatTypeFilter,
     });
     const currentUser = useSelector((state: RootState) => state.auth.user);
-    const currentUserId = currentUser?.id;
+    const currentUserId = currentUser?.id || currentUser?._id || (currentUser as any)?.userId;
     const { data: adminProfileRes } = useGetAdminProfileQuery();
     const adminProfile = adminProfileRes?.data;
 
@@ -230,14 +229,15 @@ export default function SupportChatPage() {
     }, [chats, searchQuery, getOtherParticipant]);
 
     const messagesArray = useMemo(() => {
-        if (localMessages.length > 0 && messages) {
-            const combined = [...messages, ...localMessages];
+        const base = Array.isArray(messages) ? messages : [];
+        if (localMessages.length > 0) {
+            const combined = [...base, ...localMessages];
             const uniqueMessages = combined.filter((msg, index, self) =>
                 index === self.findIndex((m) => m._id === msg._id)
             );
             return uniqueMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         }
-        return messages || [];
+        return base;
     }, [messages, localMessages]);
 
     const selectedChat = useMemo(
@@ -308,16 +308,21 @@ export default function SupportChatPage() {
 
         const handleNewMessage = (message: ChatMessage) => {
             if (!message || !message._id) return;
+            const rawChatId = typeof message.chatId === "object" && message.chatId !== null
+                ? (message.chatId as any)._id || (message.chatId as any).id
+                : message.chatId;
+            const msgChatId = String(rawChatId || "");
             const activeId = selectedChatIdRef.current;
-            const msgChatId = String(message.chatId || "");
 
-            if (activeId && msgChatId === String(activeId)) {
+            // If the message belongs to the currently active conversation, show it immediately in localMessages
+            if (activeId && String(msgChatId) === String(activeId)) {
                 setLocalMessages((prev) => {
                     const exists = prev.some((m) => m._id === message._id);
                     return exists ? prev : [...prev, message];
                 });
             }
 
+            // Also update RTK query cache so the message is persisted in memory
             dispatch(
                 chatApi.util.updateQueryData("getMessages", { chatId: msgChatId }, (draft) => {
                     if (Array.isArray(draft)) {
@@ -329,6 +334,7 @@ export default function SupportChatPage() {
                 })
             );
 
+            // Update left sidebar chat list preview and unread count
             ["all", "customer_support", "driver_support"].forEach((filter) => {
                 dispatch(
                     chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
@@ -337,6 +343,9 @@ export default function SupportChatPage() {
                             if (targetChat) {
                                 targetChat.lastMessage = message.content || "📷 Image";
                                 targetChat.lastUpdated = message.createdAt || new Date().toISOString();
+                                if (!activeId || String(activeId) !== msgChatId) {
+                                    targetChat.unreadCount = (targetChat.unreadCount || 0) + 1;
+                                }
                             }
                         }
                     })
@@ -366,8 +375,23 @@ export default function SupportChatPage() {
             );
         };
 
-        const handleMessageDeleted = ({ messageId }: { messageId: string }) => {
+        const handleMessageDeleted = ({ messageId, chatId: msgChatId }: { messageId: string; chatId?: string }) => {
+            // Remove from local optimistic state
             setLocalMessages((prev) => prev.filter((m) => m._id !== messageId));
+
+            // Also remove from RTK cache so the message doesn't persist via the
+            // messages selector even after being removed from localMessages.
+            const targetChatId = msgChatId || selectedChatIdRef.current;
+            if (targetChatId) {
+                dispatch(
+                    chatApi.util.updateQueryData("getMessages", { chatId: String(targetChatId) }, (draft) => {
+                        if (Array.isArray(draft)) {
+                            const idx = draft.findIndex((m) => m._id === messageId);
+                            if (idx !== -1) draft.splice(idx, 1);
+                        }
+                    })
+                );
+            }
         };
 
         const handleTypingStart = (data: any) => {
@@ -375,9 +399,12 @@ export default function SupportChatPage() {
             const incomingChatId = typeof data === "string" ? data : data.chatId;
             const incomingUserId = typeof data === "object" ? data.userId : null;
 
+            // Ignore our own typing events echoed back
             if (incomingUserId && currentUserId && String(incomingUserId) === String(currentUserId)) return;
+
+            // Only show indicator for the currently active chat
             const activeId = selectedChatIdRef.current;
-            if (!activeId || !incomingChatId || String(incomingChatId) === String(activeId)) {
+            if (activeId && incomingChatId && String(incomingChatId) === String(activeId)) {
                 setIsTyping(true);
             }
         };
@@ -387,16 +414,68 @@ export default function SupportChatPage() {
             const incomingChatId = typeof data === "string" ? data : data.chatId;
             const incomingUserId = typeof data === "object" ? data.userId : null;
 
+            // Ignore our own events
             if (incomingUserId && currentUserId && String(incomingUserId) === String(currentUserId)) return;
+
+            // Only clear indicator for the currently active chat
             const activeId = selectedChatIdRef.current;
-            if (!activeId || !incomingChatId || String(incomingChatId) === String(activeId)) {
+            if (activeId && incomingChatId && String(incomingChatId) === String(activeId)) {
                 setIsTyping(false);
             }
         };
 
+        const handleMessagesRead = ({ chatId, userId }: { chatId: string | any; userId: string | any }) => {
+            if (!chatId || !userId) return;
+            const activeId = selectedChatIdRef.current;
+            const rawChat = typeof chatId === "object" && chatId !== null ? chatId._id || chatId.id : chatId;
+            const chatIdStr = String(rawChat || "");
+            const userIdStr = String(typeof userId === "object" && userId !== null ? userId._id || userId.id : userId);
+
+            if (activeId && chatIdStr === String(activeId)) {
+                setLocalMessages((prev) =>
+                    prev.map((m) => {
+                        const mRawChat = typeof m.chatId === "object" && m.chatId !== null ? (m.chatId as any)._id || (m.chatId as any).id : m.chatId;
+                        const mChatId = String(mRawChat || "");
+                        if ((!mChatId || mChatId === chatIdStr) && !m.readBy?.map(String).includes(userIdStr)) {
+                            return { ...m, readBy: [...(m.readBy || []), userIdStr] };
+                        }
+                        return m;
+                    })
+                );
+
+                dispatch(
+                    chatApi.util.updateQueryData("getMessages", { chatId: chatIdStr }, (draft) => {
+                        if (Array.isArray(draft)) {
+                            draft.forEach((m) => {
+                                if (!m.readBy?.map(String).includes(userIdStr)) {
+                                    m.readBy = [...(m.readBy || []), userIdStr];
+                                }
+                            });
+                        }
+                    })
+                );
+            }
+
+            ["all", "customer_support", "driver_support"].forEach((filter) => {
+                dispatch(
+                    chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
+                        if (draft?.data) {
+                            const targetChat = draft.data.find((c) => String(c._id) === chatIdStr);
+                            if (targetChat && currentUserId && userIdStr === String(currentUserId)) {
+                                targetChat.unreadCount = 0;
+                            }
+                        }
+                    })
+                );
+            });
+        };
+
         socket.on("newMessage", handleNewMessage);
         socket.on("message:new", handleNewMessage);
+        socket.on("messagesRead", handleMessagesRead);
+        socket.on("message:read", handleMessagesRead);
         socket.on("messageDeleted", handleMessageDeleted);
+        socket.on("message:deleted", handleMessageDeleted);
         socket.on("typing:start", handleTypingStart);
         socket.on("typing:stop", handleTypingStop);
         socket.on("conversation:status", handleStatusUpdate);
@@ -406,7 +485,10 @@ export default function SupportChatPage() {
             socket.off("connect", handleConnect);
             socket.off("newMessage", handleNewMessage);
             socket.off("message:new", handleNewMessage);
+            socket.off("messagesRead", handleMessagesRead);
+            socket.off("message:read", handleMessagesRead);
             socket.off("messageDeleted", handleMessageDeleted);
+            socket.off("message:deleted", handleMessageDeleted);
             socket.off("typing:start", handleTypingStart);
             socket.off("typing:stop", handleTypingStop);
             socket.off("conversation:status", handleStatusUpdate);
@@ -451,6 +533,21 @@ export default function SupportChatPage() {
     useEffect(() => {
         scrollToBottom("smooth");
     }, [messagesArray.length, isTyping]);
+
+    // When RTK cache updates (e.g. from onQueryStarted injection or page load),
+    // remove from localMessages any message whose _id already exists in the RTK
+    // cache. This prevents the messagesArray useMemo from showing duplicates
+    // when both the socket handler and onQueryStarted try to add the same message.
+    useEffect(() => {
+        if (!Array.isArray(messages) || messages.length === 0) return;
+        setLocalMessages((prev) => {
+            if (prev.length === 0) return prev;
+            const rtkIds = new Set(messages.map((m) => m._id));
+            const filtered = prev.filter((m) => !rtkIds.has(m._id));
+            // Only trigger re-render if something actually changed
+            return filtered.length === prev.length ? prev : filtered;
+        });
+    }, [messages]);
 
     useEffect(() => {
         if (chats.length > 0) {
@@ -574,9 +671,16 @@ export default function SupportChatPage() {
         }
     };
 
-    const isCurrentUser = (senderId?: string) => {
-        return Boolean(senderId && currentUserId && senderId === currentUserId);
-    };
+    const isCurrentUser = useCallback((sender: any) => {
+        if (!sender) return false;
+        const sId = typeof sender === "object" ? sender._id || sender.id : sender;
+        const myId = currentUserId || currentUser?._id || currentUser?.id;
+        const senderRole = typeof sender === "object" ? sender.role : null;
+
+        if (sId && myId && String(sId) === String(myId)) return true;
+        if (senderRole === "admin") return true;
+        return false;
+    }, [currentUserId, currentUser]);
 
     return (
         <motion.div
@@ -863,13 +967,24 @@ export default function SupportChatPage() {
                                         {messagesArray.map((msg, index) => {
                                             const prevMsg = index > 0 ? messagesArray[index - 1] : null;
                                             const showDateDivider = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
-                                            const fromMe = isCurrentUser(msg.sender?._id);
+                                            const fromMe = isCurrentUser(msg.sender);
                                             const imageUrl = cleanImageUrl(msg.image?.url);
                                             const isImageMsg = msg.type === "image" && Boolean(imageUrl);
                                             const hasTextContent = Boolean(msg.content && msg.content !== "📷 Image");
                                             const senderAvatar = fromMe
                                                 ? adminAvatar
                                                 : (selectedContact?.avatar || getAvatarUrl(msg.sender));
+
+                                            const otherParticipantId = selectedContact?.participantId ? String(selectedContact.participantId) : null;
+                                            const myId = String(currentUserId || currentUser?._id || currentUser?.id || "");
+                                            const isSeenByRecipient = Boolean(
+                                                fromMe &&
+                                                msg.readBy &&
+                                                Array.isArray(msg.readBy) &&
+                                                (otherParticipantId
+                                                    ? msg.readBy.map(String).includes(otherParticipantId)
+                                                    : msg.readBy.some((id: string) => String(id) !== myId))
+                                            );
 
                                             return (
                                                 <React.Fragment key={msg._id}>
@@ -951,7 +1066,15 @@ export default function SupportChatPage() {
                                                                         <Trash2 className="h-3 w-3" />
                                                                     )}
                                                                 </button>
-                                                                {fromMe && <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />}
+                                                                {fromMe && (
+                                                                    <span title={isSeenByRecipient ? "Seen" : "Sent (Unseen)"} className="inline-flex">
+                                                                        {isSeenByRecipient ? (
+                                                                            <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />
+                                                                        ) : (
+                                                                            <Check className="h-3.5 w-3.5 text-gray-400" />
+                                                                        )}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

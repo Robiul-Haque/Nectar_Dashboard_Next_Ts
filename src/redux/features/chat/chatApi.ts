@@ -55,16 +55,61 @@ export const chatApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: (result, error, arg) => {
-                let chatId: string | null = null;
-                if (arg instanceof FormData) {
-                    chatId = arg.get("chatId") as string;
-                } else if (typeof arg === "object" && arg !== null && "chatId" in arg) {
-                    chatId = (arg as any).chatId;
+            // Do NOT invalidatesTags here. The backend emits a socket 'newMessage' event
+            // after persisting the message. The socket handler in support/page.tsx
+            // (handleNewMessage) will inject the message into the RTK cache via
+            // updateQueryData. If we ALSO invalidate here, RTK refetches the full
+            // message list, which races with the socket injection and can cause duplicates.
+            // Instead, we use onQueryStarted to optimistically inject the message
+            // returned from the API response directly into the RTK cache.
+            async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+                try {
+                    const { data: result } = await queryFulfilled;
+                    const sentMessage = result?.data;
+                    if (!sentMessage?._id) return;
+
+                    // Extract chatId from either FormData or plain object
+                    let chatId: string | null = null;
+                    if (arg instanceof FormData) {
+                        chatId = arg.get("chatId") as string;
+                    } else if (typeof arg === "object" && arg !== null && "chatId" in arg) {
+                        chatId = (arg as any).chatId;
+                    }
+                    if (!chatId) return;
+
+                    const chatIdStr = String(chatId);
+
+                    // Inject into the RTK messages cache for this chat.
+                    // The socket event will also arrive and try to add the same message,
+                    // but handleNewMessage deduplicates by _id so no duplicate will appear.
+                    dispatch(
+                        chatApi.util.updateQueryData("getMessages", { chatId: chatIdStr }, (draft) => {
+                            if (Array.isArray(draft)) {
+                                const exists = draft.some((m) => m._id === sentMessage._id);
+                                if (!exists) {
+                                    draft.push(sentMessage);
+                                }
+                            }
+                        })
+                    );
+
+                    // Also update the chat list preview (lastMessage, lastUpdated).
+                    ["all", "customer_support", "driver_support"].forEach((filter) => {
+                        dispatch(
+                            chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
+                                if (draft?.data) {
+                                    const targetChat = draft.data.find((c) => String(c._id) === chatIdStr);
+                                    if (targetChat) {
+                                        targetChat.lastMessage = sentMessage.content || "📷 Image";
+                                        targetChat.lastUpdated = sentMessage.createdAt || new Date().toISOString();
+                                    }
+                                }
+                            })
+                        );
+                    });
+                } catch {
+                    // If the mutation failed, do nothing — error is handled by the caller.
                 }
-                return chatId
-                    ? [tagTypes.CHAT, { type: tagTypes.CHAT, id: chatId }]
-                    : [tagTypes.CHAT];
             },
         }),
 
