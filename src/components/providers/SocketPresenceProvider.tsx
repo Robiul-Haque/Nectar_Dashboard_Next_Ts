@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -54,6 +54,7 @@ export default function SocketPresenceProvider({ children }: { children: React.R
         };
 
         const handleOnlineUsersList = (data: any) => {
+            console.log("[SOCKET DASHBOARD 💻] 📥 Received event 'onlineUsersList':", data);
             const ids = Array.isArray(data) ? data : data?.onlineUserIds || data?.userIds || data?.data;
             if (Array.isArray(ids)) {
                 const strIds = ids.map((id) => extractUserId(id) || String(id)).filter(Boolean) as string[];
@@ -62,6 +63,7 @@ export default function SocketPresenceProvider({ children }: { children: React.R
         };
 
         const handleUserStatusChanged = (data: any) => {
+            console.log("[SOCKET DASHBOARD 💻] 📥 Received event 'userStatusChanged':", data);
             const targetId = extractUserId(data);
             if (!targetId) return;
             const isOnline = Boolean(data?.isOnline);
@@ -74,6 +76,7 @@ export default function SocketPresenceProvider({ children }: { children: React.R
         };
 
         const handleUserOnline = (data: any) => {
+            console.log("[SOCKET DASHBOARD 💻] 📥 Received event 'user:online':", data);
             const targetId = extractUserId(data);
             if (!targetId) return;
             dispatch(userConnected(targetId));
@@ -81,6 +84,7 @@ export default function SocketPresenceProvider({ children }: { children: React.R
         };
 
         const handleUserOffline = (data: any) => {
+            console.log("[SOCKET DASHBOARD 💻] 📥 Received event 'user:offline':", data);
             const targetId = extractUserId(data);
             if (!targetId) return;
             dispatch(userDisconnected(targetId));

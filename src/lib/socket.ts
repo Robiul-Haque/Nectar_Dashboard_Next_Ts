@@ -1,4 +1,4 @@
-import type { Socket } from "socket.io-client";
+﻿import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { getCookie, setCookie } from "./cookies";
 import { store } from "@/redux/store";
@@ -44,6 +44,29 @@ export const getAuthToken = (): string | null => {
   return null;
 };
 
+export const getRefreshToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+
+  const cookieToken = getCookie("refreshToken");
+  if (cookieToken && cookieToken.trim()) return cookieToken.trim();
+
+  try {
+    const rawToken = localStorage.getItem("refreshToken");
+    if (rawToken && rawToken.trim()) return rawToken.trim();
+
+    const persistRoot = localStorage.getItem("persist:root");
+    if (persistRoot) {
+      const parsed = JSON.parse(persistRoot);
+      const auth = typeof parsed.auth === "string" ? JSON.parse(parsed.auth) : parsed.auth;
+      if (auth?.refreshToken && typeof auth.refreshToken === "string" && auth.refreshToken.trim()) {
+        return auth.refreshToken.trim();
+      }
+    }
+  } catch (e) {}
+
+  return null;
+};
+
 let socket: Socket | null = null;
 let isRefreshingSocketToken = false;
 
@@ -53,20 +76,25 @@ const refreshDashboardToken = async (): Promise<string | null> => {
   try {
     const apiBase =
       process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8010/api/v1";
+    const refreshToken = getRefreshToken();
     const res = await fetch(`${apiBase}/auth/admin/refresh-token`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
       credentials: "include",
     });
     if (res.ok) {
       const data = await res.json();
       const newAccessToken = data?.data?.accessToken || data?.accessToken;
+      const newRefreshToken = data?.data?.refreshToken || data?.refreshToken;
       if (newAccessToken) {
         setCookie("accessToken", newAccessToken);
+        if (newRefreshToken) setCookie("refreshToken", newRefreshToken);
         return newAccessToken;
       }
     }
   } catch (e) {
-    console.error("Failed to auto-refresh socket token:", e);
+    console.error("[SOCKET DASHBOARD 💻] Failed to auto-refresh socket token:", e);
   } finally {
     isRefreshingSocketToken = false;
   }
@@ -80,11 +108,19 @@ export const initializeSocket = () => {
   }
 
   if (socket) {
-    if (!socket.connected) {
-      socket.auth = { token: `Bearer ${token}` };
+    const currentToken = (socket.auth as any)?.token;
+    const expectedToken = `Bearer ${token}`;
+    if (currentToken !== expectedToken) {
+      socket.auth = { token: expectedToken };
       if (socket.io?.opts) {
-        socket.io.opts.extraHeaders = { authorization: `Bearer ${token}` };
+        socket.io.opts.extraHeaders = { authorization: expectedToken };
       }
+      if (socket.connected) {
+        socket.disconnect().connect();
+      } else {
+        socket.connect();
+      }
+    } else if (!socket.connected) {
       socket.connect();
     }
     return socket;
@@ -102,20 +138,21 @@ export const initializeSocket = () => {
     transports: ["polling", "websocket"],
     withCredentials: true,
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: 15,
     reconnectionDelay: 2000,
   });
 
   socket.on("connect", () => {
-    console.log("✅ Socket connected successfully!");
+    console.log("[SOCKET DASHBOARD 💻] 🟢 Socket connected successfully! Socket ID:", socket?.id);
+    socket?.emit("getOnlineUsers");
   });
 
-  socket.on("disconnect", () => {
-    console.log("🔴 Socket disconnected");
+  socket.on("disconnect", (reason) => {
+    console.log("[SOCKET DASHBOARD 💻] 🔴 Socket disconnected. Reason:", reason);
   });
 
   socket.on("connect_error", async (error: Error) => {
-    console.error("❌ Socket connection error:", error.message);
+    console.error("[SOCKET DASHBOARD 💻] ❌ Socket connection error:", error.message);
     const isAuthError =
       error.message === "Invalid or expired token" ||
       error.message === "Authentication token required" ||

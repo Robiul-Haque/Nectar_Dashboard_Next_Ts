@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -341,7 +341,7 @@ export default function SupportChatPage() {
                         if (draft?.data) {
                             const targetChat = draft.data.find((c) => String(c._id) === msgChatId);
                             if (targetChat) {
-                                targetChat.lastMessage = message.content || "📷 Image";
+                                targetChat.lastMessage = message.content || "ðŸ“· Image";
                                 targetChat.lastUpdated = message.createdAt || new Date().toISOString();
                                 if (!activeId || String(activeId) !== msgChatId) {
                                     targetChat.unreadCount = (targetChat.unreadCount || 0) + 1;
@@ -395,6 +395,8 @@ export default function SupportChatPage() {
         };
 
         const handleTypingStart = (data: any) => {
+            console.log("[SOCKET DASHBOARD ðŸ’»] ðŸ“¥ Received event 'typing:start':", data);
+            console.log("[SOCKET DASHBOARD ðŸ’»] ðŸ“¥ Received event 'typing:start':", data);
             if (!data) return;
             const incomingChatId = typeof data === "string" ? data : data.chatId;
             const incomingUserId = typeof data === "object" ? data.userId : null;
@@ -410,6 +412,8 @@ export default function SupportChatPage() {
         };
 
         const handleTypingStop = (data: any) => {
+            console.log("[SOCKET DASHBOARD ðŸ’»] ðŸ“¥ Received event 'typing:stop':", data);
+            console.log("[SOCKET DASHBOARD ðŸ’»] ðŸ“¥ Received event 'typing:stop':", data);
             if (!data) return;
             const incomingChatId = typeof data === "string" ? data : data.chatId;
             const incomingUserId = typeof data === "object" ? data.userId : null;
@@ -635,7 +639,7 @@ export default function SupportChatPage() {
                 const formData = new FormData();
                 formData.append("chatId", selectedChatId);
                 formData.append("type", "image");
-                formData.append("content", input.trim() || "📷 Image");
+                formData.append("content", input.trim() || "ðŸ“· Image");
                 formData.append("image", selectedImage);
 
                 await sendMessage(formData as any).unwrap();
@@ -970,7 +974,7 @@ export default function SupportChatPage() {
                                             const fromMe = isCurrentUser(msg.sender);
                                             const imageUrl = cleanImageUrl(msg.image?.url);
                                             const isImageMsg = msg.type === "image" && Boolean(imageUrl);
-                                            const hasTextContent = Boolean(msg.content && msg.content !== "📷 Image");
+                                            const hasTextContent = Boolean(msg.content && msg.content !== "ðŸ“· Image");
                                             const senderAvatar = fromMe
                                                 ? adminAvatar
                                                 : (selectedContact?.avatar || getAvatarUrl(msg.sender));
