@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -83,7 +83,7 @@ const getAvatarUrl = (participant?: Participant | any) => {
 };
 
 // URL detector helper to render links inside text messages safely
-const renderTextWithLinks = (text?: string) => {
+const renderTextWithLinks = (text?: string, isFromMe: boolean = false) => {
     if (!text) return null;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
@@ -96,7 +96,11 @@ const renderTextWithLinks = (text?: string) => {
                     href={part}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline font-semibold text-emerald-200 hover:text-white dark:text-emerald-400 dark:hover:text-emerald-300 break-all"
+                    className={
+                        isFromMe
+                            ? "underline underline-offset-2 font-semibold text-white hover:text-emerald-100 hover:opacity-90 dark:text-white dark:hover:text-emerald-100 transition-all break-all"
+                            : "underline underline-offset-2 font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-all break-all"
+                    }
                 >
                     {part}
                 </a>
@@ -1048,7 +1052,7 @@ export default function SupportChatPage() {
                                                             )}
                                                             {hasTextContent && (
                                                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                                                    {renderTextWithLinks(msg.content)}
+                                                                    {renderTextWithLinks(msg.content, fromMe)}
                                                                 </p>
                                                             )}
                                                         </motion.div>
