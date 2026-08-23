@@ -149,6 +149,8 @@ export default function SupportChatPage() {
     const reduxOnlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
     const selectedChatIdRef = useRef<string | null>(selectedChatId);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const typingAutoClearRef = useRef<NodeJS.Timeout | null>(null);
+    const processedMessageIdsRef = useRef<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {

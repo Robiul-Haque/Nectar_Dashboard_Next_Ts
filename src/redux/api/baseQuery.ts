@@ -2,6 +2,7 @@ import { fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@re
 import type { RootState } from "../store";
 import { logout, setCredentials } from "../features/auth/authSlice";
 import { setCookie, deleteCookie } from "@/lib/cookies";
+import { updateSocketAuthToken } from "@/lib/socket";
 
 const rawBaseQuery = fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -23,7 +24,7 @@ export const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs, unknown, Fetc
 ) => {
     let result = await rawBaseQuery(args, api, extraOptions);
 
-    // Access token expired — attempt refresh
+    // Access token expired – attempt refresh
     if (result.error?.status === 401) {
         // If already refreshing, wait briefly and retry original request
         if (isRefreshing) {
@@ -62,10 +63,15 @@ export const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs, unknown, Fetc
                 // Update browser cookie so Next.js proxy sees the new token
                 setCookie("accessToken", newAccessToken);
 
+                // Sync socket authentication token immediately
+                try {
+                    updateSocketAuthToken(newAccessToken);
+                } catch (e) {}
+
                 // Retry the original failed request with the new token
                 result = await rawBaseQuery(args, api, extraOptions);
             } else {
-                // Refresh failed — clear everything and redirect to login
+                // Refresh failed – clear everything and redirect to login
                 deleteCookie("accessToken");
                 api.dispatch(logout());
             }
@@ -75,4 +81,4 @@ export const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs, unknown, Fetc
     }
 
     return result;
-};
+};

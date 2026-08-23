@@ -1,6 +1,6 @@
 import { baseApi } from "../../api/baseApi";
 import { tagTypes } from "../../api/tagTypes";
-import { GetChatsParams, GetChatsResponse, CreateChatRequest, Chat, GetMessagesParams, GetMessagesResponse, SendMessageRequest, Message, ChatDetailsResponse } from "./chatTypes";
+import { GetChatsParams, GetChatsResponse, CreateChatRequest, Chat, GetMessagesParams, SendMessageRequest, Message, ChatDetailsResponse } from "./chatTypes";
 
 export const chatApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -37,13 +37,11 @@ export const chatApi = baseApi.injectEndpoints({
                 params: params,
             }),
             transformResponse: (response: any) => {
-                // Extract messages array (supports both response.data array and legacy response.data.data array)
                 const list = Array.isArray(response?.data)
                     ? response.data
                     : Array.isArray(response?.data?.data)
                     ? response.data.data
                     : [];
-                // Clone array before reversing to avoid mutating frozen RTK Query state
                 return [...list].reverse();
             },
             providesTags: (result, error, arg) => [{ type: tagTypes.CHAT, id: arg.chatId }],
@@ -55,20 +53,12 @@ export const chatApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            // Do NOT invalidatesTags here. The backend emits a socket 'newMessage' event
-            // after persisting the message. The socket handler in support/page.tsx
-            // (handleNewMessage) will inject the message into the RTK cache via
-            // updateQueryData. If we ALSO invalidate here, RTK refetches the full
-            // message list, which races with the socket injection and can cause duplicates.
-            // Instead, we use onQueryStarted to optimistically inject the message
-            // returned from the API response directly into the RTK cache.
             async onQueryStarted(arg, { dispatch, queryFulfilled }) {
                 try {
                     const { data: result } = await queryFulfilled;
                     const sentMessage = result?.data;
                     if (!sentMessage?._id) return;
 
-                    // Extract chatId from either FormData or plain object
                     let chatId: string | null = null;
                     if (arg instanceof FormData) {
                         chatId = arg.get("chatId") as string;
@@ -79,9 +69,6 @@ export const chatApi = baseApi.injectEndpoints({
 
                     const chatIdStr = String(chatId);
 
-                    // Inject into the RTK messages cache for this chat.
-                    // The socket event will also arrive and try to add the same message,
-                    // but handleNewMessage deduplicates by _id so no duplicate will appear.
                     dispatch(
                         chatApi.util.updateQueryData("getMessages", { chatId: chatIdStr }, (draft) => {
                             if (Array.isArray(draft)) {
@@ -93,7 +80,6 @@ export const chatApi = baseApi.injectEndpoints({
                         })
                     );
 
-                    // Also update the chat list preview (lastMessage, lastUpdated).
                     ["all", "customer_support", "driver_support"].forEach((filter) => {
                         dispatch(
                             chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
@@ -107,9 +93,7 @@ export const chatApi = baseApi.injectEndpoints({
                             })
                         );
                     });
-                } catch {
-                    // If the mutation failed, do nothing — error is handled by the caller.
-                }
+                } catch {}
             },
         }),
 
@@ -118,7 +102,7 @@ export const chatApi = baseApi.injectEndpoints({
                 url: `/message/read/${chatId}`,
                 method: "PATCH",
             }),
-            invalidatesTags: (result, error, arg) => [{ type: tagTypes.CHAT, id: arg }],
+            // Do NOT invalidate tagTypes.CHAT to prevent refetch loops while actively chatting
         }),
 
         updateChatStatus: builder.mutation<{ success: boolean; message: string; data: Chat }, { chatId: string; status: "open" | "resolved" }>({

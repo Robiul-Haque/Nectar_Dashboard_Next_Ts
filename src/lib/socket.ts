@@ -1,4 +1,4 @@
-﻿import type { Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { getCookie, setCookie } from "./cookies";
 import { store } from "@/redux/store";
@@ -70,6 +70,22 @@ export const getRefreshToken = (): string | null => {
 let socket: Socket | null = null;
 let isRefreshingSocketToken = false;
 
+export const updateSocketAuthToken = (newToken: string) => {
+  if (!newToken || !newToken.trim()) return;
+  const bearerToken = newToken.startsWith("Bearer ") ? newToken.trim() : `Bearer ${newToken.trim()}`;
+  if (socket) {
+    socket.auth = { token: bearerToken };
+    if (socket.io?.opts) {
+      socket.io.opts.extraHeaders = { authorization: bearerToken };
+    }
+    if (socket.connected) {
+      socket.disconnect().connect();
+    } else {
+      socket.connect();
+    }
+  }
+};
+
 const refreshDashboardToken = async (): Promise<string | null> => {
   if (isRefreshingSocketToken) return null;
   isRefreshingSocketToken = true;
@@ -90,11 +106,20 @@ const refreshDashboardToken = async (): Promise<string | null> => {
       if (newAccessToken) {
         setCookie("accessToken", newAccessToken);
         if (newRefreshToken) setCookie("refreshToken", newRefreshToken);
+        
+        try {
+          const { setCredentials } = await import("@/redux/features/auth/authSlice");
+          const currentUser = store?.getState()?.auth?.user;
+          if (currentUser) {
+            store.dispatch(setCredentials({ user: currentUser, accessToken: newAccessToken }));
+          }
+        } catch (e) {}
+
         return newAccessToken;
       }
     }
   } catch (e) {
-    console.error("[SOCKET DASHBOARD 💻] Failed to auto-refresh socket token:", e);
+    console.error("[SOCKET DASHBOARD ⚠️] Failed to auto-refresh socket token:", e);
   } finally {
     isRefreshingSocketToken = false;
   }
@@ -107,9 +132,10 @@ export const initializeSocket = () => {
     return null;
   }
 
+  const expectedToken = token.startsWith("Bearer ") ? token.trim() : `Bearer ${token.trim()}`;
+
   if (socket) {
     const currentToken = (socket.auth as any)?.token;
-    const expectedToken = `Bearer ${token}`;
     if (currentToken !== expectedToken) {
       socket.auth = { token: expectedToken };
       if (socket.io?.opts) {
@@ -130,29 +156,29 @@ export const initializeSocket = () => {
 
   socket = io(socketUrl, {
     auth: {
-      token: `Bearer ${token}`,
+      token: expectedToken,
     },
     extraHeaders: {
-      authorization: `Bearer ${token}`,
+      authorization: expectedToken,
     },
     transports: ["polling", "websocket"],
     withCredentials: true,
     reconnection: true,
-    reconnectionAttempts: 15,
-    reconnectionDelay: 2000,
+    reconnectionAttempts: 25,
+    reconnectionDelay: 1500,
   });
 
   socket.on("connect", () => {
-    console.log("[SOCKET DASHBOARD 💻] 🟢 Socket connected successfully! Socket ID:", socket?.id);
+    console.log("[SOCKET DASHBOARD 🟢] ✅ Socket connected successfully! Socket ID:", socket?.id);
     socket?.emit("getOnlineUsers");
   });
 
   socket.on("disconnect", (reason) => {
-    console.log("[SOCKET DASHBOARD 💻] 🔴 Socket disconnected. Reason:", reason);
+    console.log("[SOCKET DASHBOARD 🔴] ⚠️ Socket disconnected. Reason:", reason);
   });
 
   socket.on("connect_error", async (error: Error) => {
-    console.error("[SOCKET DASHBOARD 💻] ❌ Socket connection error:", error.message);
+    console.error("[SOCKET DASHBOARD ⚠️] ❌ Socket connection error:", error.message);
     const isAuthError =
       error.message === "Invalid or expired token" ||
       error.message === "Authentication token required" ||
@@ -165,10 +191,11 @@ export const initializeSocket = () => {
         getAuthToken();
 
       if (freshToken && socket) {
-        socket.auth = { token: `Bearer ${freshToken}` };
+        const freshBearer = freshToken.startsWith("Bearer ") ? freshToken.trim() : `Bearer ${freshToken.trim()}`;
+        socket.auth = { token: freshBearer };
         if (socket.io?.opts) {
           socket.io.opts.extraHeaders = {
-            authorization: `Bearer ${freshToken}`,
+            authorization: freshBearer,
           };
         }
         socket.disconnect().connect();
