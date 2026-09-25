@@ -92,19 +92,19 @@ export default function ProductReviewModal({ isOpen, onClose, product }: Product
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-[2rem] border border-gray-200 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-gray-800 dark:bg-gray-900/95 flex flex-col pointer-events-auto"
+                            className="relative w-full max-w-4xl max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] overflow-hidden rounded-[2rem] border border-gray-200 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-gray-800 dark:bg-gray-900/95 flex flex-col pointer-events-auto"
                         >
                             <div className="h-1.5 bg-gradient-to-r from-amber-400 to-amber-600" />
                             
                             <button
                                 onClick={onClose}
-                                className="absolute right-8 top-8 rounded-2xl p-3 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all z-10 active:scale-90 border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 shadow-sm"
+                                className="absolute right-4 sm:right-6 top-4 sm:top-6 rounded-2xl p-2.5 sm:p-3 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all z-10 active:scale-90 border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 shadow-sm"
                             >
                                 <X className="h-5 w-5" />
                             </button>
 
-                            <div className="flex-1 overflow-hidden flex flex-col p-6 md:p-10">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pr-12 flex-shrink-0">
+                            <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 sm:p-6 md:p-8">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 mb-4 sm:mb-6 pr-10 sm:pr-12 flex-shrink-0">
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-[10px] uppercase tracking-widest">
                                             <Star className="h-3.5 w-3.5 fill-amber-600" />

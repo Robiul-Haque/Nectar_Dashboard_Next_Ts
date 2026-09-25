@@ -9,6 +9,9 @@ import { logout } from "@/redux/features/auth/authSlice";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUpdateAdminProfileMutation } from "@/redux/features/user/userApi";
+import { deleteCookie } from "@/lib/cookies";
+import { logoutAction } from "@/app/actions/auth";
+import { disconnectSocket } from "@/lib/socket";
 
 interface UserProfile {
     name: string;
@@ -44,7 +47,7 @@ export default function ProfileModal({
             setPreviewUrl(null);
             setErrors({});
         }
-    }, [open, user.name]);
+    }, [open, user.name, user.email]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -171,11 +174,26 @@ export default function ProfileModal({
         }
     };
 
-    const handleLogout = () => {
-        dispatch(logout());
-        onClose();
-        toast.success("Logged out successfully");
-        router.push("/login");
+    const handleLogout = async () => {
+        try {
+            disconnectSocket();
+            dispatch(logout());
+            deleteCookie("accessToken");
+            deleteCookie("refreshToken");
+            try {
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("token");
+            } catch {}
+            onClose();
+            toast.success("Logged out successfully");
+            await logoutAction();
+        } catch (error: any) {
+            if (error?.digest?.includes("NEXT_REDIRECT")) {
+                throw error;
+            }
+            window.location.href = "/login";
+        }
     };
 
     return (
@@ -202,10 +220,10 @@ export default function ProfileModal({
                     >
                         <div
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-lg rounded-3xl border border-gray-200/70 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col rounded-3xl border border-gray-200/70 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl overflow-hidden"
                         >
                             {/* Header */}
-                            <div className="relative px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+                            <div className="relative px-5 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
                                 <button
                                     onClick={onClose}
                                     disabled={isLoading}
@@ -223,7 +241,7 @@ export default function ProfileModal({
                             </div>
 
                             {/* Body */}
-                            <div className="p-6 space-y-6">
+                            <div className="p-5 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto flex-1 min-h-0">
                                 {/* Avatar */}
                                 <div className="flex flex-col items-center">
                                     <div className="relative group">
@@ -239,13 +257,13 @@ export default function ProfileModal({
                                             <Image
                                                 src={previewUrl || user.image || ""}
                                                 alt={user.name}
-                                                width={104}
-                                                height={104}
+                                                width={96}
+                                                height={96}
                                                 unoptimized={!!previewUrl}
-                                                className="w-26 h-26 rounded-3xl object-cover ring-4 ring-emerald-100 dark:ring-emerald-900/40"
+                                                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-cover ring-4 ring-emerald-100 dark:ring-emerald-900/40"
                                             />
                                         ) : (
-                                            <div className="w-26 h-26 rounded-3xl bg-linear-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg">
+                                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-linear-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-lg">
                                                 {initials}
                                             </div>
                                         )}
@@ -306,9 +324,9 @@ export default function ProfileModal({
                                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                             <input
                                                 type="email"
-                                                value={user.email}
+                                                value={user.email || "admin@nectar.com"}
                                                 readOnly
-                                                className="w-full pl-12 pr-4 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                                className="w-full pl-12 pr-4 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
                                             />
                                         </div>
                                     </div>
@@ -344,7 +362,7 @@ export default function ProfileModal({
                             </div>
 
                             {/* Footer */}
-                            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between px-6 py-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50">
+                            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/50 shrink-0">
                                 <button
                                     onClick={handleLogout}
                                     disabled={isLoading}

@@ -189,7 +189,7 @@ export default function GlobalSearch() {
                 <div className="absolute -inset-0.5 rounded-2xl bg-linear-to-r from-emerald-500/20 via-green-500/10 to-emerald-500/20 opacity-0 blur-lg transition duration-500 group-focus-within:opacity-100" />
 
                 {/* Search Icon */}
-                <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-gray-400 transition-colors duration-300 group-focus-within:text-emerald-500 dark:text-gray-500 dark:group-focus-within:text-emerald-400" />
+                <Search className="pointer-events-none absolute left-3 sm:left-4 top-1/2 z-10 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400 transition-colors duration-300 group-focus-within:text-emerald-500 dark:text-gray-500 dark:group-focus-within:text-emerald-400" />
 
                 {/* Search Input */}
                 <input
@@ -201,8 +201,8 @@ export default function GlobalSearch() {
                         if (!isOpen && e.target.value) setIsOpen(true);
                     }}
                     type="text"
-                    placeholder="Search products, orders, customers..."
-                    className="relative w-full rounded-2xl border border-gray-200/80 bg-white/90 py-3 pl-12 pr-20 text-sm font-medium text-gray-900 shadow-sm backdrop-blur-xl transition-all duration-300 placeholder:text-gray-400 hover:border-emerald-200 hover:shadow-md focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none dark:border-gray-700/80 dark:bg-gray-800/80 dark:text-white dark:placeholder:text-gray-500 dark:hover:border-emerald-800 dark:focus:border-emerald-700"
+                    placeholder="Search products, orders..."
+                    className="relative w-full rounded-2xl border border-gray-200/80 bg-white/90 py-2.5 sm:py-3 pl-9 sm:pl-12 pr-4 sm:pr-20 text-xs sm:text-sm font-medium text-gray-900 shadow-sm backdrop-blur-xl transition-all duration-300 placeholder:text-gray-400 hover:border-emerald-200 hover:shadow-md focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none dark:border-gray-700/80 dark:bg-gray-800/80 dark:text-white dark:placeholder:text-gray-500 dark:hover:border-emerald-800 dark:focus:border-emerald-700"
                 />
 
                 {/* Ctrl + K Shortcut Badge */}
@@ -243,28 +243,30 @@ export default function GlobalSearch() {
                                                     setIsOpen(false);
                                                     setSearchQuery("");
                                                 }}
-                                                className={`flex w-full items-center justify-between gap-4 rounded-2xl p-4 text-left transition-all duration-200 ${selectedIndex === index
+                                                className={`flex w-full items-center justify-between gap-3 sm:gap-4 rounded-2xl p-4 text-left transition-all duration-200 ${selectedIndex === index
                                                         ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100"
                                                         : "hover:bg-gray-50 dark:hover:bg-gray-800"
                                                     }`}
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${getCategoryColor(item.category)}`}>
+                                                <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${getCategoryColor(item.category)}`}>
                                                         {item.icon}
                                                     </div>
-                                                    <div>
-                                                        <p className={`font-semibold ${selectedIndex === index ? "text-emerald-900 dark:text-emerald-100" : "text-gray-900 dark:text-white"
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className={`truncate font-semibold ${selectedIndex === index ? "text-emerald-900 dark:text-emerald-100" : "text-gray-900 dark:text-white"
                                                             }`}>
                                                             {item.title}
                                                         </p>
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.subtitle}</p>
+                                                        <p className="truncate text-sm text-gray-500 dark:text-gray-400" title={item.subtitle}>
+                                                            {item.subtitle}
+                                                        </p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${getCategoryColor(item.category)}`}>
+                                                <div className="flex shrink-0 items-center gap-2">
+                                                    <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold capitalize whitespace-nowrap ${getCategoryColor(item.category)}`}>
                                                         {item.category}
                                                     </span>
-                                                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                                                    <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
                                                 </div>
                                             </motion.button>
                                         ))}

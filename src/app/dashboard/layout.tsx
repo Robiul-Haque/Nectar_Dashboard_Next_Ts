@@ -4,26 +4,25 @@ import { useState } from "react";
 
 import Header from "@/components/dashboard/layout/header/Header";
 import Sidebar from "@/components/dashboard/layout/sidebar/Sidebar";
-import SocketPresenceProvider from "@/components/providers/SocketPresenceProvider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-            {/* Sidebar */}
-            <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-            {/* Main */}
-            <div className="flex flex-1 flex-col overflow-hidden">
-                {/* Header */}
-                <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-                {/* Content */}
-                <main className="flex-1 overflow-auto pt-2 md:pt-4 lg:pt-6 p-4 md:p-6 lg:p-8">
-                    {children}
-                </main>
+                    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+                {/* Sidebar */}
+                <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+                {/* Main */}
+                <div className="flex flex-1 flex-col overflow-hidden">
+                    {/* Header */}
+                    <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+                    {/* Content */}
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 lg:p-6 xl:p-8 pt-2 sm:pt-3 lg:pt-4 xl:pt-6">
+                        {children}
+                    </main>
+                </div>
+                {/* Overlay */}
+                {sidebarOpen && (<div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />)}
             </div>
-            {/* Overlay */}
-            {sidebarOpen && (<div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />)}
-        </div>
     );
 }

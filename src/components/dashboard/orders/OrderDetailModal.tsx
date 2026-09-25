@@ -59,16 +59,16 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onCl
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col"
+                        className="relative w-full max-w-4xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-200 dark:border-gray-800 shrink-0">
                             <div>
-                                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                     Order Details
-                                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">#{order.orderId}</span>
+                                    <span className="text-xs sm:text-sm font-normal text-gray-500 dark:text-gray-400">#{order.orderId}</span>
                                 </h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                                     <Calendar className="w-3.5 h-3.5" />
                                     {formatDate(order.createdAt)}
                                 </p>
@@ -77,12 +77,12 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onCl
                                 onClick={onClose}
                                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                             >
-                                <X className="w-6 h-6 text-gray-500" />
+                                <X className="w-5 sm:w-6 h-5 sm:h-6 text-gray-500" />
                             </button>
                         </div>
 
                         {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
                             {/* Top Section: Status & Actions */}
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl">
                                 <div className="space-y-1">

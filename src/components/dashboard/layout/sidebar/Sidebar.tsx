@@ -10,6 +10,7 @@ import { logout } from "@/redux/features/auth/authSlice";
 import toast from "react-hot-toast";
 import { deleteCookie } from "@/lib/cookies";
 import { logoutAction } from "@/app/actions/auth";
+import { disconnectSocket } from "@/lib/socket";
 
 const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -49,7 +50,7 @@ function LogoutModal({ isOpen, onClose, onConfirm, }: LogoutModalProps) {
                     />
 
                     {/* Modal */}
-                    <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-110 flex items-center justify-center p-3 sm:p-4">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.92, y: 20 }}
                             animate={{
@@ -67,21 +68,21 @@ function LogoutModal({ isOpen, onClose, onConfirm, }: LogoutModalProps) {
                                 ease: [0.22, 1, 0.36, 1],
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+                            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900 max-h-[calc(100dvh-2rem)] flex flex-col"
                         >
                             {/* Top Gradient Bar */}
-                            <div className="h-1.5 bg-linear-to-r from-red-500 via-rose-500 to-orange-500" />
+                            <div className="h-1.5 bg-linear-to-r from-red-500 via-rose-500 to-orange-500 shrink-0" />
 
                             {/* Close Button */}
                             <button
                                 onClick={onClose}
-                                className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                                className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 z-10"
                                 aria-label="Close"
                             >
                                 <X className="h-5 w-5" />
                             </button>
 
-                            <div className="p-7">
+                            <div className="p-6 sm:p-7 overflow-y-auto flex-1 min-h-0">
                                 {/* Icon */}
                                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-950/40">
                                     <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
@@ -134,17 +135,28 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
         const loadingToast = toast.loading("Logging out...");
 
         try {
+            // Disconnect socket immediately so background polling/reconnection stops
+            disconnectSocket();
+
             // 2. Clear state in Redux
             dispatch(logout());
 
             // 3. Client-side cookie deletion (best effort)
             deleteCookie("accessToken");
+            deleteCookie("refreshToken");
 
-            // 4. Dismiss loading toast BEFORE calling server action
+            // 4. Clear any tokens from localStorage
+            try {
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("token");
+            } catch {}
+
+            // 5. Dismiss loading toast BEFORE calling server action
             // because logoutAction() will redirect and stop execution here
             toast.dismiss(loadingToast);
 
-            // 5. Trigger Server Action for reliable cookie deletion and redirect
+            // 6. Trigger Server Action for reliable cookie deletion and redirect
             await logoutAction();
 
         } catch (error: any) {
@@ -166,14 +178,14 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:flex w-72 h-screen flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-50">
-                <div className="p-6">
-                    <div className="flex items-center gap-3 mb-10">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-600">
+            <aside className="hidden lg:flex w-72 h-screen flex-col justify-between border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 z-50">
+                <div className="p-4 lg:p-5 xl:p-6 flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex items-center gap-3 mb-6 xl:mb-8">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-600">
                             <span className="text-2xl font-bold text-white">N</span>
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                            <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                                 Nectar
                             </h2>
                             <p className="text-xs font-medium text-green-600">
@@ -182,7 +194,7 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
                         </div>
                     </div>
 
-                    <nav className="space-y-3">
+                    <nav className="space-y-1.5 xl:space-y-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
@@ -191,7 +203,7 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300 ${isActive
+                                    className={`flex items-center gap-3 rounded-2xl px-3.5 py-2.5 xl:px-4 xl:py-3 text-sm font-medium transition-all duration-300 ${isActive
                                         ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
                                         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                                         }`}
@@ -204,10 +216,10 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
                     </nav>
                 </div>
 
-                <div className="mt-auto border-t border-gray-200 p-6 dark:border-gray-800">
+                <div className="border-t border-gray-200 p-4 lg:p-5 xl:p-6 dark:border-gray-800 shrink-0">
                     <button
                         onClick={() => setLogoutModalOpen(true)}
-                        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-red-600 transition-all duration-300 hover:bg-red-50 dark:hover:bg-red-950"
+                        className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 xl:px-4 xl:py-3 text-sm font-medium text-red-600 transition-all duration-300 hover:bg-red-50 dark:hover:bg-red-950"
                     >
                         <LogOut className="h-5 w-5" />
                         Logout
@@ -217,11 +229,35 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
 
             {/* Mobile Sidebar */}
             <div
-                className={`fixed inset-y-0 left-0 z-50 w-72 transform border-r border-gray-200 bg-white transition-transform duration-300 dark:border-gray-800 dark:bg-gray-900 lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] flex flex-col justify-between transform border-r border-gray-200 bg-white transition-transform duration-300 dark:border-gray-800 dark:bg-gray-900 lg:hidden ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
-                <div className="p-6">
-                    <nav className="space-y-3">
+                {/* Mobile Sidebar Header */}
+                <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-600">
+                            <span className="text-2xl font-bold text-white">N</span>
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                                Nectar
+                            </h2>
+                            <p className="text-xs font-medium text-green-600">
+                                Organic Editorial
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                        aria-label="Close sidebar"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="p-5 flex-1 min-h-0 overflow-y-auto">
+                    <nav className="space-y-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
@@ -242,16 +278,16 @@ export default function Sidebar({ isOpen, setIsOpen, }: SidebarProps) {
                             );
                         })}
                     </nav>
+                </div>
 
-                    <div className="mt-6 border-t border-gray-200 pt-6 dark:border-gray-800">
-                        <button
-                            onClick={() => setLogoutModalOpen(true)}
-                            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-red-600 transition-all duration-300 hover:bg-red-50 dark:hover:bg-red-950"
-                        >
-                            <LogOut className="h-5 w-5" />
-                            Logout
-                        </button>
-                    </div>
+                <div className="border-t border-gray-200 p-5 dark:border-gray-800 shrink-0">
+                    <button
+                        onClick={() => setLogoutModalOpen(true)}
+                        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-red-600 transition-all duration-300 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                        <LogOut className="h-5 w-5" />
+                        Logout
+                    </button>
                 </div>
             </div>
 

@@ -4,6 +4,7 @@ import "./globals.css";
 import ThemeProvider from "@/providers/ThemeProvider";
 import ReduxProvider from "@/providers/ReduxProvider";
 import { Toaster } from "react-hot-toast";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitializerScript }} />
+        <Script id="theme-initializer" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitializerScript }} />
       </head>
       <body className="antialiased bg-gray-50 dark:bg-gray-950" suppressHydrationWarning>
         <ReduxProvider>

@@ -29,19 +29,23 @@ export function proxy(req: NextRequest) {
         return NextResponse.next();
     }
 
-    const token = req.cookies.get("accessToken")?.value;
+    const accessToken = req.cookies.get("accessToken")?.value;
+    const refreshToken = req.cookies.get("refreshToken")?.value;
 
     const isLoginPage = req.nextUrl.pathname === "/login";
     const isProtected = req.nextUrl.pathname.startsWith("/dashboard");
 
-    // Token is missing or expired → redirect to login
-    const tokenMissingOrExpired = !token || isTokenExpired(token);
+    const hasValidAccessToken = Boolean(accessToken && !isTokenExpired(accessToken));
+    const hasValidRefreshToken = Boolean(refreshToken && !isTokenExpired(refreshToken));
+    const isAuthenticated = hasValidAccessToken || hasValidRefreshToken;
 
-    if (tokenMissingOrExpired && isProtected) {
+    // Protected route: user has neither valid access nor valid refresh token → redirect to login
+    if (isProtected && !isAuthenticated) {
         return NextResponse.redirect(new URL("/login", req.url));
     }
 
-    if (token && !isTokenExpired(token) && isLoginPage) {
+    // Login page: redirect to dashboard only if user has an active, valid access token
+    if (isLoginPage && hasValidAccessToken) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 

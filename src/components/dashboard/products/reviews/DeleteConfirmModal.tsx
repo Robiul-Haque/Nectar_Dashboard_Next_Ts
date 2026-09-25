@@ -33,24 +33,23 @@ export default function DeleteConfirmModal({
                         className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
                     />
 
-                    {/* Modal */}
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900 pointer-events-auto"
+                            className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900 pointer-events-auto max-h-[calc(100dvh-2rem)] flex flex-col"
                         >
-                            <div className="h-1.5 bg-red-500" />
+                            <div className="h-1.5 bg-red-500 shrink-0" />
                             
                             <button
                                 onClick={onClose}
-                                className="absolute right-4 top-4 rounded-full p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="absolute right-4 top-4 rounded-full p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-10"
                             >
                                 <X className="h-5 w-5" />
                             </button>
 
-                            <div className="p-8">
+                            <div className="p-6 sm:p-8 overflow-y-auto flex-1 min-h-0">
                                 <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-950/40">
                                     <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
                                 </div>

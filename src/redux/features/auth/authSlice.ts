@@ -21,12 +21,14 @@ export interface DecodedUser {
 
 interface AuthState {
     accessToken: string | null;
+    refreshToken: string | null;
     user: DecodedUser | null;
     status: "idle" | "authenticated" | "unauthenticated";
 }
 
 const initialState: AuthState = {
     accessToken: null,
+    refreshToken: null,
     user: null,
     status: "idle",
 };
@@ -40,6 +42,7 @@ const authSlice = createSlice({
             state,
             action: PayloadAction<{
                 accessToken: string;
+                refreshToken?: string | null;
                 user?: DecodedUser | null;
                 id?: string;
                 _id?: string;
@@ -52,8 +55,11 @@ const authSlice = createSlice({
                 exp?: number;
             }>
         ) => {
-            const { accessToken, user, ...rest } = action.payload;
+            const { accessToken, refreshToken, user, ...rest } = action.payload;
             state.accessToken = accessToken;
+            if (refreshToken !== undefined) {
+                state.refreshToken = refreshToken;
+            }
             
             // If user object is provided, use it. Otherwise, use the flat properties.
             if (user) {
@@ -77,11 +83,13 @@ const authSlice = createSlice({
 
         logout: (state) => {
             state.accessToken = null;
+            state.refreshToken = null;
             state.user = null;
             state.status = "unauthenticated";
-            // Clear browser cookie so Next.js proxy stops redirecting to dashboard
+            // Clear browser cookies so Next.js proxy stops redirecting to dashboard
             if (typeof window !== "undefined") {
                 deleteCookie("accessToken");
+                deleteCookie("refreshToken");
             }
         },
     },

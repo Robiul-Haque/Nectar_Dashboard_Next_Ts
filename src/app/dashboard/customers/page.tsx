@@ -129,7 +129,6 @@ export default function CustomersPage() {
     const [toggleUserStatus, { isLoading: isUpdatingStatus }] = useToggleUserStatusMutation();
 
     const users = usersData?.data || [];
-    const onlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
     const pagination = usersData?.pagination;
     const totalPages = pagination?.totalPages || 0;
 

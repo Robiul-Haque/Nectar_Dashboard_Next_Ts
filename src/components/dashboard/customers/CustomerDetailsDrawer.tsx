@@ -35,7 +35,6 @@ interface CustomerDetailsDrawerProps {
 type TabType = "overview" | "orders" | "wishlist-cart" | "activity" | "notes";
 
 export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: CustomerDetailsDrawerProps) {
-    const onlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
     const [activeTab, setActiveTab] = useState<TabType>("overview");
 
     // Pagination states for different tabs
@@ -265,19 +264,7 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{profile.name}</h3>
                                                 <p className="text-sm text-gray-500">{profile.email}</p>
                                                 <div className="mt-2 flex flex-wrap gap-2">
-                                                    {(() => {
-                                                        const isOnline = Boolean(customerId && onlineUserIds.includes(String(customerId)));
-                                                        return (
-                                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-                                                                isOnline
-                                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                                                                    : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
-                                                            }`}>
-                                                                <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
-                                                                {isOnline ? "ONLINE" : "OFFLINE"}
-                                                            </span>
-                                                        );
-                                                    })()}
+                                                    
                                                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
                                                         status?.isActive
                                                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"

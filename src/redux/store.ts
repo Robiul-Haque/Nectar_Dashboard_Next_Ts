@@ -18,7 +18,7 @@ const authPersistConfig = {
     key: "auth",
     storage,
 
-    whitelist: ["accessToken", "user"],
+    whitelist: ["accessToken", "refreshToken", "user"],
 };
 
 const persistedAuthReducer =
@@ -51,3 +51,6 @@ export type RootState =
 
 export type AppDispatch =
     typeof store.dispatch;
+
+export type AppStore =
+    typeof store;

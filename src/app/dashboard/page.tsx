@@ -63,22 +63,22 @@ const itemVariants: Variants = {
 
 function DashboardSkeleton() {
     return (
-        <div className="w-full max-w-screen-2xl mx-auto space-y-5 animate-pulse">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800/50">
+        <div className="w-full max-w-screen-2xl mx-auto space-y-4 sm:space-y-5 animate-pulse">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-800/50">
                 <div>
-                    <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg mb-2"></div>
-                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                    <div className="h-7 sm:h-8 w-48 sm:w-64 bg-gray-200 dark:bg-gray-800 rounded-lg mb-2"></div>
+                    <div className="h-4 w-36 sm:w-48 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
                 </div>
-                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                <div className="h-6 w-28 sm:w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-                {[1, 2, 3, 4].map(i => <div key={i} className="h-42 bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-6 sm:mb-8">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-32 sm:h-36 xl:h-40 bg-gray-200 dark:bg-gray-800 rounded-3xl xl:rounded-4xl"></div>)}
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 h-125 bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
-                <div className="h-125 bg-gray-200 dark:bg-gray-800 rounded-4xl"></div>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 sm:gap-6">
+                <div className="xl:col-span-2 h-80 xl:h-110 bg-gray-200 dark:bg-gray-800 rounded-3xl xl:rounded-4xl"></div>
+                <div className="h-80 xl:h-110 bg-gray-200 dark:bg-gray-800 rounded-3xl xl:rounded-4xl"></div>
             </div>
         </div>
     );
@@ -118,19 +118,19 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="w-full max-w-screen-2xl mx-auto space-y-5">
+        <div className="w-full max-w-screen-2xl mx-auto space-y-4 sm:space-y-5">
             {/* Welcome Header - Compact but Bold */}
             <motion.div
                 variants={pageVariants}
                 initial="hidden"
                 animate="show"
-                className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800/50"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-800/50"
             >
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
                         Welcome back, Admin!
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm font-semibold mt-1">
+                    <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-semibold mt-0.5 sm:mt-1">
                         Here's what's happening at Nectar today.
                     </p>
                 </div>
@@ -143,12 +143,12 @@ export default function DashboardPage() {
                 />
             </motion.div>
 
-            {/* Stats Cards - Added Bottom Margin */}
+            {/* Stats Cards - Responsive 4 col on lg+ */}
             <motion.div
                 variants={pageVariants}
                 initial="hidden"
                 animate="show"
-                className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-6 sm:mb-8"
             >
                 <Card title="TOTAL SALES" value={`$${data?.cards?.totalSales?.toLocaleString() || '0'}`} />
                 <Card title="DAILY ORDERS" value={`${data?.cards?.dailyOrders?.toLocaleString() || '0'}`} />
@@ -157,43 +157,43 @@ export default function DashboardPage() {
             </motion.div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 sm:gap-6">
                 {/* Sales Overview Chart */}
                 <motion.div
                     variants={itemVariants}
-                    className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-4xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800"
+                    className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-3xl xl:rounded-4xl p-5 sm:p-6 xl:p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-between min-w-0"
                 >
-                    <div className="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+                    <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 xl:gap-8">
                             <div>
-                                <div className="flex items-center gap-3">
-                                    <h3 className="font-semibold text-xl text-gray-900 dark:text-white">
+                                <div className="flex items-center gap-2.5">
+                                    <h3 className="font-semibold text-lg sm:text-xl text-gray-900 dark:text-white">
                                         Sales Overview
                                     </h3>
                                     <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                 </div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider mt-1">
+                                <p className="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider mt-0.5 sm:mt-1">
                                     Revenue Performance Tracking
                                 </p>
                             </div>
 
-                            <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-800" />
+                            <div className="hidden sm:block h-8 sm:h-10 w-px bg-gray-200 dark:bg-gray-800" />
 
                             <div>
                                 <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold mb-0.5">Total Revenue</p>
-                                <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                                <p className="text-xl sm:text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
                                     ${currentData.reduce((acc, item) => acc + item.revenue, 0).toLocaleString()}
                                 </p>
                             </div>
                         </div>
 
                         {/* Timeframe Selector */}
-                        <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
+                        <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit self-start sm:self-auto">
                             {timeframeOptions.map((option) => (
                                 <button
                                     key={option.id}
                                     onClick={() => setSelectedTimeframe(option.id as "weekly" | "monthly")}
-                                    className={`relative px-5 py-2 text-xs font-semibold transition-all duration-300 rounded-xl ${selectedTimeframe === option.id
+                                    className={`relative px-4 sm:px-5 py-1.5 sm:py-2 text-xs font-semibold transition-all duration-300 rounded-xl ${selectedTimeframe === option.id
                                         ? "text-emerald-700 dark:text-emerald-400"
                                         : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                         }`}
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="h-80 md:h-96">
+                    <div className="h-64 sm:h-72 lg:h-80 xl:h-92 w-full min-w-0">
                         {currentData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={currentData} margin={{ top: 40, right: 0, left: 0, bottom: 0 }}>
@@ -311,16 +311,16 @@ export default function DashboardPage() {
                 {/* Popular Products */}
                 <motion.div
                     variants={itemVariants}
-                    className="bg-white dark:bg-gray-900 rounded-4xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col"
+                    className="bg-white dark:bg-gray-900 rounded-3xl xl:rounded-4xl p-5 sm:p-6 xl:p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-between min-w-0"
                 >
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="font-semibold text-xl text-gray-900 dark:text-white tracking-tight">
+                    <div className="flex items-center justify-between mb-5 sm:mb-6">
+                        <h3 className="font-semibold text-lg sm:text-xl text-gray-900 dark:text-white tracking-tight">
                             Popular Products
                         </h3>
                         <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
 
-                    <div className="space-y-6 flex-1">
+                    <div className="space-y-4 sm:space-y-5 flex-1 min-w-0">
                         {data?.popularProducts?.length ? (
                             data.popularProducts.map((product) => (
                                 <Product
@@ -339,7 +339,7 @@ export default function DashboardPage() {
                                 />
                             ))
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-12">
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-10">
                                 <svg className="w-10 h-10 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                 </svg>
@@ -350,7 +350,7 @@ export default function DashboardPage() {
 
                     <Link
                         href="/dashboard/products"
-                        className="group relative block mt-8 w-full py-4 text-center text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 transition-all duration-300 ease-out hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-emerald-400/40 overflow-hidden"
+                        className="group relative block mt-6 sm:mt-8 w-full py-3 sm:py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 transition-all duration-300 ease-out hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/40 overflow-hidden shrink-0"
                     >
                         View Full Inventory
                     </Link>
@@ -375,33 +375,33 @@ function Card({
     return (
         <motion.div
             variants={itemVariants}
-            whileHover={{ y: -8, scale: 1.02 }}
-            className="group relative bg-white dark:bg-gray-900 p-7 rounded-4xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5"
+            whileHover={{ y: -6, scale: 1.01 }}
+            className="group relative bg-white dark:bg-gray-900 p-4.5 sm:p-5 lg:p-5 xl:p-6 rounded-3xl xl:rounded-4xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-500 hover:shadow-xl hover:shadow-emerald-500/5 min-w-0"
         >
             <div className={`absolute -right-10 -top-10 h-36 w-36 rounded-full blur-3xl transition-opacity duration-700 opacity-10 group-hover:opacity-30 ${danger ? "bg-red-500" : "bg-emerald-500"}`} />
 
-            <div className="relative z-10">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
+            <div className="relative z-10 min-w-0">
+                <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 truncate">
                     {title}
                 </p>
 
                 <h2
-                    className={`text-3xl font-semibold tracking-tight ${danger ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}
+                    className={`text-2xl sm:text-3xl font-semibold tracking-tight truncate ${danger ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}
                 >
                     {value}
                 </h2>
 
                 {extra && (
-                    <div className="mt-5 flex items-center gap-3">
+                    <div className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-3 flex-wrap">
                         <span
-                            className={`inline-flex items-center rounded-xl px-3 py-1 text-xs font-semibold tracking-tight ${danger
+                            className={`inline-flex items-center rounded-xl px-2.5 py-0.5 sm:px-3 sm:py-1 text-xs font-semibold tracking-tight ${danger
                                 ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
                                 : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400"
                                 }`}
                         >
                             {extra}
                         </span>
-                        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider opacity-80">
+                        <span className="text-[10px] sm:text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider opacity-80">
                             vs last month
                         </span>
                     </div>
@@ -428,26 +428,26 @@ function Product({
     return (
         <motion.div
             variants={itemVariants}
-            whileHover={{ x: 8 }}
-            className="flex justify-between items-center py-1 group cursor-pointer"
+            whileHover={{ x: 4 }}
+            className="flex justify-between items-center py-1 group cursor-pointer gap-3 min-w-0"
         >
-            <div className="flex items-center gap-5 flex-1">
-                <div className="h-14 w-14 rounded-2xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-sm">
+            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                <div className="h-11 w-11 sm:h-12 sm:w-12 xl:h-13 xl:w-13 rounded-2xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-lg sm:text-xl shrink-0 group-hover:scale-105 transition-all duration-300 shadow-sm overflow-hidden">
                     {icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 transition-colors text-[15px] truncate tracking-tight">
+                    <p className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-600 transition-colors text-sm sm:text-[15px] truncate tracking-tight">
                         {name}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-tight mt-0.5">{category}</p>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1 uppercase tracking-tighter">{sold}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-tight mt-0.5 truncate">{category}</p>
+                    <p className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5 uppercase tracking-tighter truncate">{sold}</p>
                 </div>
             </div>
-            <div className="text-right">
-                <span className="text-base font-medium text-gray-900 dark:text-white block tracking-tighter">
+            <div className="text-right shrink-0">
+                <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white block tracking-tighter">
                     {price}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wider">
+                <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wider">
                     UNIT
                 </span>
             </div>

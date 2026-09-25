@@ -145,8 +145,7 @@ export default function SupportChatPage() {
     const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-    // Online presence state comes directly from Redux presenceSlice
-    const reduxOnlineUserIds = useSelector((state: RootState) => state.presence?.onlineUserIds || []);
+    
     const selectedChatIdRef = useRef<string | null>(selectedChatId);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const typingAutoClearRef = useRef<NodeJS.Timeout | null>(null);
@@ -256,9 +255,6 @@ export default function SupportChatPage() {
         const participant = getOtherParticipant(selectedChat);
         if (!participant) return null;
 
-        const pId = String(participant._id || (participant as any).id || "");
-        const isOnline = Boolean(pId && reduxOnlineUserIds.some((id) => String(id) === pId));
-
         return {
             id: selectedChat._id,
             participantId: participant._id,
@@ -270,9 +266,8 @@ export default function SupportChatPage() {
             chatType: selectedChat.chatType || "customer_support",
             message: selectedChat.lastMessage,
             time: formatLastUpdated(selectedChat.lastUpdated),
-            isOnline,
         };
-    }, [selectedChat, reduxOnlineUserIds, getOtherParticipant]);
+    }, [selectedChat, getOtherParticipant]);
 
     const relatedOrder = chatDetailsRes?.data?.relatedOrder;
 
@@ -293,7 +288,6 @@ export default function SupportChatPage() {
         if (!socket) return;
 
         const handleConnect = () => {
-            socket.emit("getOnlineUsers");
             if (currentUserId) {
                 socket.emit("joinRoom", { chatId: currentUserId });
             }
@@ -800,7 +794,6 @@ export default function SupportChatPage() {
                                 if (!participant) return null;
                                 const isSelected = chat._id === selectedChatId;
                                 const hasUnread = (chat.unreadCount || 0) > 0;
-                                const isParticipantOnline = Boolean(participant && reduxOnlineUserIds.includes(String(participant._id || (participant as any).id)));
 
                                 return (
                                     <motion.button
@@ -825,12 +818,7 @@ export default function SupportChatPage() {
                                                         fill
                                                         className="rounded-full object-cover border border-white dark:border-gray-700"
                                                     />
-                                                    <span
-                                                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
-                                                            isParticipantOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
-                                                        }`}
-                                                        title={isParticipantOnline ? "Online" : "Offline"}
-                                                    />
+                                                    
                                                 </div>
                                                 {chat.chatType === "driver_support" && (
                                                     <span className="absolute -bottom-1 -right-1 bg-blue-500 text-[9px] text-white px-1 rounded-full font-bold">
@@ -884,12 +872,7 @@ export default function SupportChatPage() {
                                             fill
                                             className="rounded-full object-cover border-2 border-emerald-100 dark:border-emerald-900"
                                         />
-                                        <span
-                                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
-                                                selectedContact.isOnline ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
-                                            }`}
-                                            title={selectedContact.isOnline ? "Online" : "Offline"}
-                                        />
+                                        
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">

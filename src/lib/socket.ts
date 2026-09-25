@@ -1,7 +1,13 @@
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { getCookie, setCookie } from "./cookies";
-import { store } from "@/redux/store";
+import type { AppStore } from "@/redux/store";
+
+let storeInstance: AppStore | null = null;
+
+export const injectSocketStore = (s: AppStore) => {
+  storeInstance = s;
+};
 
 const getSocketUrl = (): string => {
   const envUrl =
@@ -20,26 +26,27 @@ export const getAuthToken = (): string | null => {
   const cookieToken = getCookie("accessToken") || getCookie("token");
   if (cookieToken && cookieToken.trim()) return cookieToken.trim();
 
-  // 2. Check Redux Store
+  // 2. Check Redux Store (if injected)
   try {
-    const stateToken = store?.getState()?.auth?.accessToken;
+    const stateToken = storeInstance?.getState()?.auth?.accessToken;
     if (stateToken && stateToken.trim()) return stateToken.trim();
-  } catch (e) {}
+  } catch {}
 
   // 3. Check LocalStorage
   try {
     const rawToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
     if (rawToken && rawToken.trim()) return rawToken.trim();
 
-    const persistRoot = localStorage.getItem("persist:root");
-    if (persistRoot) {
-      const parsed = JSON.parse(persistRoot);
-      const auth = typeof parsed.auth === "string" ? JSON.parse(parsed.auth) : parsed.auth;
-      if (auth?.accessToken && typeof auth.accessToken === "string" && auth.accessToken.trim()) {
-        return auth.accessToken.trim();
+    const persistData = localStorage.getItem("persist:auth") || localStorage.getItem("persist:root");
+    if (persistData) {
+      const parsed = JSON.parse(persistData);
+      const auth = typeof parsed.auth === "string" ? JSON.parse(parsed.auth) : parsed;
+      const token = auth?.accessToken;
+      if (token && typeof token === "string" && token.trim()) {
+        return token.replace(/^"|"$/g, "").trim();
       }
     }
-  } catch (e) {}
+  } catch {}
 
   return null;
 };
@@ -62,7 +69,7 @@ export const getRefreshToken = (): string | null => {
         return auth.refreshToken.trim();
       }
     }
-  } catch (e) {}
+  } catch {}
 
   return null;
 };
@@ -109,11 +116,12 @@ const refreshDashboardToken = async (): Promise<string | null> => {
         
         try {
           const { setCredentials } = await import("@/redux/features/auth/authSlice");
-          const currentUser = store?.getState()?.auth?.user;
+          const targetStore = storeInstance || (await import("@/redux/store")).store;
+          const currentUser = targetStore?.getState()?.auth?.user;
           if (currentUser) {
-            store.dispatch(setCredentials({ user: currentUser, accessToken: newAccessToken }));
+            targetStore.dispatch(setCredentials({ user: currentUser, accessToken: newAccessToken, refreshToken: newRefreshToken }));
           }
-        } catch (e) {}
+        } catch {}
 
         return newAccessToken;
       }
@@ -154,54 +162,79 @@ export const initializeSocket = () => {
 
   const socketUrl = getSocketUrl();
 
-  socket = io(socketUrl, {
-    auth: {
-      token: expectedToken,
-    },
-    extraHeaders: {
-      authorization: expectedToken,
-    },
-    transports: ["polling", "websocket"],
-    withCredentials: true,
-    reconnection: true,
-    reconnectionAttempts: 25,
-    reconnectionDelay: 1500,
-  });
+  let lastErrorLogTime = 0;
+  try {
+    socket = io(socketUrl, {
+      auth: {
+        token: expectedToken,
+      },
+      extraHeaders: {
+        authorization: expectedToken,
+      },
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2500,
+    });
 
-  socket.on("connect", () => {
-    console.log("[SOCKET DASHBOARD 🟢] ✅ Socket connected successfully! Socket ID:", socket?.id);
-    socket?.emit("getOnlineUsers");
-  });
+    socket.on("connect", () => {
+      console.log("[SOCKET DASHBOARD 🟢] ✅ Socket connected successfully! Socket ID:", socket?.id);
+    });
 
-  socket.on("disconnect", (reason) => {
-    console.log("[SOCKET DASHBOARD 🔴] ⚠️ Socket disconnected. Reason:", reason);
-  });
+    socket.on("disconnect", (reason) => {
+      console.log("[SOCKET DASHBOARD 🔴] ⚠️ Socket disconnected. Reason:", reason);
+    });
 
-  socket.on("connect_error", async (error: Error) => {
-    console.error("[SOCKET DASHBOARD ⚠️] ❌ Socket connection error:", error.message);
-    const isAuthError =
-      error.message === "Invalid or expired token" ||
-      error.message === "Authentication token required" ||
-      error.message.toLowerCase().includes("token expired") ||
-      error.message.toLowerCase().includes("jwt expired");
-
-    if (isAuthError) {
-      const freshToken =
-        (await refreshDashboardToken()) ||
-        getAuthToken();
-
-      if (freshToken && socket) {
-        const freshBearer = freshToken.startsWith("Bearer ") ? freshToken.trim() : `Bearer ${freshToken.trim()}`;
-        socket.auth = { token: freshBearer };
-        if (socket.io?.opts) {
-          socket.io.opts.extraHeaders = {
-            authorization: freshBearer,
-          };
-        }
-        socket.disconnect().connect();
+    socket.on("connect_error", async (error: Error) => {
+      const now = Date.now();
+      if (now - lastErrorLogTime > 15000) {
+        console.warn("[SOCKET DASHBOARD ⚠️] Socket connection warning:", error?.message || 'Connection failed');
+        lastErrorLogTime = now;
       }
-    }
-  });
+
+      // If user has no tokens at all (logged out), stop reconnecting
+      const currentToken = getAuthToken();
+      const currentRefreshToken = getRefreshToken();
+      if (!currentToken && !currentRefreshToken) {
+        try { socket?.disconnect(); } catch {}
+        return;
+      }
+
+      const errMsg = (error?.message || '').toLowerCase();
+      const isAuthError =
+        errMsg.includes("invalid") ||
+        errMsg.includes("expired") ||
+        errMsg.includes("unauthorized") ||
+        errMsg.includes("jwt expired");
+
+      if (isAuthError) {
+        try {
+          const freshToken =
+            (await refreshDashboardToken()) ||
+            getAuthToken();
+
+          if (freshToken && socket) {
+            const freshBearer = freshToken.startsWith("Bearer ") ? freshToken.trim() : `Bearer ${freshToken.trim()}`;
+            socket.auth = { token: freshBearer };
+            if (socket.io?.opts) {
+              socket.io.opts.extraHeaders = {
+                authorization: freshBearer,
+              };
+            }
+            socket.disconnect().connect();
+          } else {
+            socket?.disconnect();
+          }
+        } catch (e) {
+          console.warn("[SOCKET DASHBOARD ⚠️] Auth error recovery failed:", e);
+        }
+      }
+    });
+  } catch (err) {
+    console.warn("[SOCKET DASHBOARD ⚠️] initializeSocket failed gracefully:", err);
+    return null;
+  }
 
   return socket;
 };

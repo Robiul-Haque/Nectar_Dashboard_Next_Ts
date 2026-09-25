@@ -8,10 +8,13 @@ import { redirect } from 'next/navigation';
  */
 export async function logoutAction() {
     const cookieStore = await cookies();
-    
-    // 1. Clear the cookie on the server side
+
+    // 1. Clear authentication cookies on the server side
     cookieStore.delete('accessToken');
+    cookieStore.delete('refreshToken');
+    cookieStore.set('accessToken', '', { maxAge: 0, path: '/' });
+    cookieStore.set('refreshToken', '', { maxAge: 0, path: '/' });
     
-    // 2. Perform the redirect - this is handled by Next.js and is very reliable
+    // 2. Perform the redirect to login page
     redirect('/login');
 }

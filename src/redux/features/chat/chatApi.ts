@@ -102,7 +102,22 @@ export const chatApi = baseApi.injectEndpoints({
                 url: `/message/read/${chatId}`,
                 method: "PATCH",
             }),
-            // Do NOT invalidate tagTypes.CHAT to prevent refetch loops while actively chatting
+            async onQueryStarted(chatId, { dispatch, queryFulfilled }) {
+                const chatIdStr = String(chatId);
+                ["all", "customer_support", "driver_support"].forEach((filter) => {
+                    dispatch(
+                        chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
+                            if (draft?.data && Array.isArray(draft.data)) {
+                                const target = draft.data.find((item) => String(item._id) === chatIdStr);
+                                if (target) target.unreadCount = 0;
+                            }
+                        })
+                    );
+                });
+                try {
+                    await queryFulfilled;
+                } catch {}
+            },
         }),
 
         updateChatStatus: builder.mutation<{ success: boolean; message: string; data: Chat }, { chatId: string; status: "open" | "resolved" }>({

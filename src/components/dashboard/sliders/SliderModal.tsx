@@ -151,20 +151,20 @@ export default function SliderModal({ isOpen, onClose, slider }: SliderModalProp
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-100 dark:border-gray-800"
+                        className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden flex flex-col border border-gray-100 dark:border-gray-800"
                     >
                         {/* HEADER */}
-                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
                                     {slider ? "Edit Slider" : "Add New Slider"}
                                 </h2>
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                                     Fill in the details for your homepage slider.
                                 </p>
                             </div>
@@ -180,7 +180,7 @@ export default function SliderModal({ isOpen, onClose, slider }: SliderModalProp
                         <form
                             id="slider-form"
                             onSubmit={handleSubmit(onSubmit) as React.FormEventHandler<HTMLFormElement>}
-                            className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"
+                            className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar"
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Title */}
@@ -328,7 +328,7 @@ export default function SliderModal({ isOpen, onClose, slider }: SliderModalProp
                         </form>
 
                         {/* FOOTER */}
-                        <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3 bg-gray-50/50 dark:bg-gray-900/50">
+                        <div className="p-4 sm:p-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
                             <button
                                 type="button"
                                 onClick={onClose}

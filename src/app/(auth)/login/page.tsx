@@ -53,6 +53,7 @@ export default function LoginPage() {
             const res: any = await loginUser(form).unwrap();
 
             const token = res?.data?.accessToken;
+            const refreshToken = res?.data?.refreshToken;
 
             if (!token) {
                 toast.error("Invalid login response");
@@ -65,6 +66,8 @@ export default function LoginPage() {
             const user = {
                 id: decoded?.sub,
                 role: decoded?.role,
+                email: form.email,
+                name: "Admin",
                 iat: decoded?.iat,
                 exp: decoded?.exp,
             };
@@ -73,12 +76,16 @@ export default function LoginPage() {
             dispatch(
                 setCredentials({
                     accessToken: token,
+                    refreshToken,
                     user
                 })
             );
 
-            // set cookie for proxy
+            // set cookies for proxy
             setCookie("accessToken", token);
+            if (refreshToken) {
+                setCookie("refreshToken", refreshToken, 7 * 24 * 60 * 60);
+            }
 
             setSuccess(true);
             toast.success("Login successful");

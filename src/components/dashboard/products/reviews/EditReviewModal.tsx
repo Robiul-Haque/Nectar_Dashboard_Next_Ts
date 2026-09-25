@@ -63,23 +63,23 @@ export default function EditReviewModal({ isOpen, onClose, review }: EditReviewM
                         className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
                     />
 
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900 pointer-events-auto"
+                            className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900 pointer-events-auto max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] flex flex-col"
                         >
-                            <div className="h-1.5 bg-emerald-500" />
+                            <div className="h-1.5 bg-emerald-500 shrink-0" />
                             
                             <button
                                 onClick={onClose}
-                                className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-10"
                             >
                                 <X className="h-5 w-5" />
                             </button>
 
-                            <form onSubmit={handleSubmit} className="p-6 md:p-8">
+                            <form onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-y-auto flex-1 min-h-0">
                                 <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
                                     Refine Feedback
                                 </h3>

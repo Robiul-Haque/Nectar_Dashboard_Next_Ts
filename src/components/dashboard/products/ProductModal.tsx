@@ -301,21 +301,21 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
                     />
 
                     {/* Modal */}
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-                            className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden pointer-events-auto max-h-[90vh] overflow-y-auto"
+                            className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden pointer-events-auto max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] flex flex-col"
                         >
                             {/* Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
                                 <div>
-                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
                                         {isEdit ? "Edit Product" : "Create New Product"}
                                     </h2>
-                                    <p className="text-sm text-gray-500 mt-1">
+                                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                                         {isEdit ? "Update product details below." : "Add a new product to the catalog."}
                                     </p>
                                 </div>
@@ -329,7 +329,8 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+                            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                                <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
 
                                 {/* Name & SKU */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -612,20 +613,22 @@ export default function ProductModal({ isOpen, onClose, product }: ProductModalP
                                     ))}
                                 </div>
 
-                                {/* Actions */}
-                                <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                </div>
+
+                                {/* Actions / Pinned Footer */}
+                                <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-xs flex gap-3 shrink-0">
                                     <button
                                         type="button"
                                         onClick={onClose}
                                         disabled={isLoading}
-                                        className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all disabled:opacity-50 text-sm"
+                                        className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 transition-all disabled:opacity-50 text-sm"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isLoading}
-                                        className="flex-1 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2 text-sm"
+                                        className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2 text-sm"
                                     >
                                         {isLoading ? (
                                             <>

@@ -26,7 +26,7 @@ export default function DateTimeWidget() {
             initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4 }}
-            className="hidden xl:flex items-center gap-2 md:mr-6"
+            className="hidden xl:flex items-center gap-2 xl:mr-2 2xl:mr-4 shrink-0"
         >
             {/* Time Card */}
             <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-linear-to-r from-emerald-50/90 to-green-50/80 dark:from-emerald-950/30 dark:to-green-950/20 px-3 py-2 backdrop-blur-xl">

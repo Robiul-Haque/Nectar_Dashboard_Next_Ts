@@ -19,7 +19,22 @@ const aiOutputSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
+        let apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            try {
+                const fs = await import("fs");
+                const path = await import("path");
+                const envPath = path.resolve(process.cwd(), ".env.local");
+                if (fs.existsSync(envPath)) {
+                    const content = fs.readFileSync(envPath, "utf-8");
+                    const match = content.match(/GEMINI_API_KEY\s*=\s*([^\r\n]+)/);
+                    if (match && match[1]) {
+                        apiKey = match[1].trim().replace(/^['"]|['"]$/g, "");
+                    }
+                }
+            } catch {}
+        }
+
         if (!apiKey) {
             return NextResponse.json(
                 {
@@ -60,8 +75,8 @@ Content Generation Rules:
 
         const ai = new GoogleGenAI({ apiKey });
 
-        // Use gemini-2.5-flash-lite (or gemini-2.5-flash) with structured JSON output
-        const modelName = "gemini-2.5-flash-lite";
+        // Use modern Gemini 3.5 / 3.8 flash models
+        const modelName = "gemini-3.5-flash-lite";
 
         let response;
         try {
@@ -91,10 +106,10 @@ Content Generation Rules:
                 },
             });
         } catch (sdkError: any) {
-            // Fallback to gemini-2.5-flash if 2.5-flash-lite isn't available in current region/API version
-            console.warn("Falling back to gemini-2.5-flash model due to:", sdkError?.message);
+            // Fallback to gemini-3.8-flash if flash-lite is unavailable
+            console.warn("Falling back to gemini-3.8-flash model due to:", sdkError?.message);
             response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
+                model: "gemini-3.8-flash",
                 contents: prompt,
                 config: {
                     responseMimeType: "application/json",

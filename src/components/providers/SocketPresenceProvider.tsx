@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
-import { initializeSocket } from "@/lib/socket";
+import { initializeSocket, disconnectSocket } from "@/lib/socket";
 import { setOnlineUserIds, userConnected, userDisconnected } from "@/redux/features/presence/presenceSlice";
 import { chatApi } from "@/redux/features/chat/chatApi";
 import { userApi } from "@/redux/features/user/userApi";
@@ -13,6 +13,11 @@ export default function SocketPresenceProvider({ children }: { children: React.R
     const accessToken = useSelector((state: RootState) => state.auth.accessToken);
 
     useEffect(() => {
+        if (!accessToken) {
+            disconnectSocket();
+            return;
+        }
+
         const socket = initializeSocket();
         if (!socket) return;
 

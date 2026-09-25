@@ -41,28 +41,28 @@ export default function DeleteBrandModal({ isOpen, onClose, brand }: DeleteBrand
                     />
 
                     {/* Modal */}
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.92, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.92, y: 20 }}
                             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto"
+                            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto max-h-[calc(100dvh-2rem)] flex flex-col"
                         >
                             {/* Top Gradient Bar */}
-                            <div className="h-1.5 bg-linear-to-r from-red-500 via-rose-500 to-orange-500" />
+                            <div className="h-1.5 bg-linear-to-r from-red-500 via-rose-500 to-orange-500 shrink-0" />
 
                             {/* Close Button */}
                             <button
                                 onClick={onClose}
                                 disabled={isLoading}
-                                className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
+                                className="absolute right-4 top-4 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 z-10"
                                 aria-label="Close"
                             >
                                 <X className="h-5 w-5" />
                             </button>
 
-                            <div className="p-7">
+                            <div className="p-6 sm:p-7 overflow-y-auto flex-1 min-h-0">
                                 {/* Icon */}
                                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-950/40">
                                     <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
