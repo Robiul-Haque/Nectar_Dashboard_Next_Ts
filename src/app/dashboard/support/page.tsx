@@ -893,6 +893,7 @@ export default function SupportChatPage() {
                                                         alt={participant.name || "User"}
                                                         fill
                                                         sizes="40px"
+                                                        priority={index === 0}
                                                         className="rounded-full object-cover border border-white dark:border-gray-700"
                                                     />
                                                     
@@ -948,6 +949,7 @@ export default function SupportChatPage() {
                                             alt={selectedContact.name || "User"}
                                             fill
                                             sizes="40px"
+                                            priority
                                             className="rounded-full object-cover border-2 border-emerald-100 dark:border-emerald-900"
                                         />
                                         
@@ -1281,6 +1283,7 @@ export default function SupportChatPage() {
                                         alt={selectedContact.name || "User"}
                                         fill
                                         sizes="80px"
+                                        priority
                                         className="rounded-full object-cover border-4 border-white shadow-sm dark:border-gray-800"
                                     />
                                 </div>

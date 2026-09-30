@@ -1,6 +1,6 @@
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
-import { getCookie, setCookie } from "./cookies";
+import { getCookie, setCookie, deleteCookie } from "./cookies";
 import type { AppStore } from "@/redux/store";
 
 let storeInstance: AppStore | null = null;
@@ -22,15 +22,17 @@ const getSocketUrl = (): string => {
 export const getAuthToken = (): string | null => {
   if (typeof window === "undefined") return null;
 
-  // 1. Check Cookie
-  const cookieToken = getCookie("accessToken") || getCookie("token");
-  if (cookieToken && cookieToken.trim()) return cookieToken.trim();
-
-  // 2. Check Redux Store (if injected)
+  // 1. Check Redux Store (if injected)
   try {
     const stateToken = storeInstance?.getState()?.auth?.accessToken;
-    if (stateToken && stateToken.trim()) return stateToken.trim();
+    if (stateToken && typeof stateToken === "string" && stateToken.trim()) {
+      return stateToken.replace(/^"|"$/g, "").trim();
+    }
   } catch {}
+
+  // 2. Check Cookie
+  const cookieToken = getCookie("accessToken") || getCookie("token");
+  if (cookieToken && cookieToken.trim()) return cookieToken.trim();
 
   // 3. Check LocalStorage
   try {
@@ -54,19 +56,30 @@ export const getAuthToken = (): string | null => {
 export const getRefreshToken = (): string | null => {
   if (typeof window === "undefined") return null;
 
+  // 1. Check Redux Store (if injected)
+  try {
+    const stateRefreshToken = storeInstance?.getState()?.auth?.refreshToken;
+    if (stateRefreshToken && typeof stateRefreshToken === "string" && stateRefreshToken.trim()) {
+      return stateRefreshToken.replace(/^"|"$/g, "").trim();
+    }
+  } catch {}
+
+  // 2. Check Cookie
   const cookieToken = getCookie("refreshToken");
   if (cookieToken && cookieToken.trim()) return cookieToken.trim();
 
+  // 3. Check LocalStorage
   try {
     const rawToken = localStorage.getItem("refreshToken");
     if (rawToken && rawToken.trim()) return rawToken.trim();
 
-    const persistRoot = localStorage.getItem("persist:root");
-    if (persistRoot) {
-      const parsed = JSON.parse(persistRoot);
-      const auth = typeof parsed.auth === "string" ? JSON.parse(parsed.auth) : parsed.auth;
-      if (auth?.refreshToken && typeof auth.refreshToken === "string" && auth.refreshToken.trim()) {
-        return auth.refreshToken.trim();
+    const persistData = localStorage.getItem("persist:auth") || localStorage.getItem("persist:root");
+    if (persistData) {
+      const parsed = JSON.parse(persistData);
+      const auth = typeof parsed.auth === "string" ? JSON.parse(parsed.auth) : parsed;
+      const refreshToken = auth?.refreshToken;
+      if (refreshToken && typeof refreshToken === "string" && refreshToken.trim()) {
+        return refreshToken.replace(/^"|"$/g, "").trim();
       }
     }
   } catch {}
@@ -97,13 +110,19 @@ const refreshDashboardToken = async (): Promise<string | null> => {
   if (isRefreshingSocketToken) return null;
   isRefreshingSocketToken = true;
   try {
-    const apiBase =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8010/api/v1";
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8010/api/v1";
     const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      deleteCookie("accessToken");
+      deleteCookie("refreshToken");
+      socket?.disconnect();
+      return null;
+    }
+
     const res = await fetch(`${apiBase}/auth/admin/refresh-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+      body: JSON.stringify({ refreshToken }),
       credentials: "include",
     });
     if (res.ok) {
@@ -125,6 +144,16 @@ const refreshDashboardToken = async (): Promise<string | null> => {
 
         return newAccessToken;
       }
+    } else if (res.status === 401 || res.status === 403) {
+      // Refresh token is expired or revoked
+      deleteCookie("accessToken");
+      deleteCookie("refreshToken");
+      try {
+        const { logout } = await import("@/redux/features/auth/authSlice");
+        const targetStore = storeInstance || (await import("@/redux/store")).store;
+        targetStore?.dispatch(logout());
+      } catch {}
+      return null;
     }
   } catch (e) {
     console.error("[SOCKET DASHBOARD ⚠️] Failed to auto-refresh socket token:", e);
@@ -187,20 +216,6 @@ export const initializeSocket = () => {
     });
 
     socket.on("connect_error", async (error: Error) => {
-      const now = Date.now();
-      if (now - lastErrorLogTime > 15000) {
-        console.warn("[SOCKET DASHBOARD ⚠️] Socket connection warning:", error?.message || 'Connection failed');
-        lastErrorLogTime = now;
-      }
-
-      // If user has no tokens at all (logged out), stop reconnecting
-      const currentToken = getAuthToken();
-      const currentRefreshToken = getRefreshToken();
-      if (!currentToken && !currentRefreshToken) {
-        try { socket?.disconnect(); } catch {}
-        return;
-      }
-
       const errMsg = (error?.message || '').toLowerCase();
       const isAuthError =
         errMsg.includes("invalid") ||
@@ -210,9 +225,7 @@ export const initializeSocket = () => {
 
       if (isAuthError) {
         try {
-          const freshToken =
-            (await refreshDashboardToken()) ||
-            getAuthToken();
+          const freshToken = await refreshDashboardToken();
 
           if (freshToken && socket) {
             const freshBearer = freshToken.startsWith("Bearer ") ? freshToken.trim() : `Bearer ${freshToken.trim()}`;
@@ -223,12 +236,28 @@ export const initializeSocket = () => {
               };
             }
             socket.disconnect().connect();
+            return;
           } else {
+            // Cannot refresh token - stop attempting reconnection
             socket?.disconnect();
           }
         } catch (e) {
           console.warn("[SOCKET DASHBOARD ⚠️] Auth error recovery failed:", e);
         }
+      }
+
+      // If user has no tokens at all (logged out), stop reconnecting
+      const currentToken = getAuthToken();
+      const currentRefreshToken = getRefreshToken();
+      if (!currentToken && !currentRefreshToken) {
+        try { socket?.disconnect(); } catch {}
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastErrorLogTime > 15000) {
+        console.warn("[SOCKET DASHBOARD ⚠️] Socket connection warning:", error?.message || 'Connection failed');
+        lastErrorLogTime = now;
       }
     });
   } catch (err) {
