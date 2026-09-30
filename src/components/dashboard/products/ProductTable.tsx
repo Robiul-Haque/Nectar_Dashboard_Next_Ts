@@ -234,6 +234,7 @@ export default function ProductTable({
                                                         src={cleanImageUrl(product.image.url)}
                                                         alt={product.name}
                                                         fill
+                                                        sizes="56px"
                                                         className="object-cover"
                                                     />
                                                 ) : (

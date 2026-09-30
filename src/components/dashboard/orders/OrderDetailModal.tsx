@@ -183,6 +183,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onCl
                                                                     src={item.image} 
                                                                     alt={item.name} 
                                                                     fill
+                                                                    sizes="48px"
                                                                     className="object-cover" 
                                                                 />
                                                             </div>

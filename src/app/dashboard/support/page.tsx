@@ -218,8 +218,16 @@ export default function SupportChatPage() {
         [currentUserId]
     );
 
+    const isCurrentUser = useCallback((sender: any) => {
+        if (!sender) return false;
+        const sId = typeof sender === "object" ? sender._id || sender.id : sender;
+        const myId = currentUserId || currentUser?._id || currentUser?.id;
+        const senderRole = typeof sender === "object" ? sender.role : null;
 
-
+        if (sId && myId && String(sId) === String(myId)) return true;
+        if (senderRole === "admin") return true;
+        return false;
+    }, [currentUserId, currentUser]);
     const filteredChats = useMemo(() => {
         if (!searchQuery.trim()) return chats;
         const lowerQuery = searchQuery.toLowerCase().trim();
@@ -522,21 +530,96 @@ export default function SupportChatPage() {
         };
     }, [selectedChatId, markAsRead]);
 
-    const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-        }, 80);
-    };
+    const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+    const isNearBottomRef = useRef<boolean>(true);
+    const prevMessagesLengthRef = useRef<number>(0);
+    const lastScrolledChatIdRef = useRef<string | null>(null);
 
+    // Scroll threshold (~400px accommodates approximately 3-4 text messages or 1-2 images from the bottom)
+    const SCROLL_THRESHOLD = 400;
+
+    const handleScroll = useCallback(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const { scrollHeight, scrollTop, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        isNearBottomRef.current = distanceFromBottom <= SCROLL_THRESHOLD;
+    }, []);
+
+    const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+        const performScroll = () => {
+            const container = messagesContainerRef.current;
+            if (container) {
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior,
+                });
+            }
+            if (messagesEndRef.current) {
+                messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
+            }
+        };
+
+        performScroll();
+        const t1 = setTimeout(performScroll, 80);
+        const t2 = setTimeout(performScroll, 200);
+        const t3 = setTimeout(performScroll, 380);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+        };
+    }, []);
+
+    // Scroll when image attachments finish loading so that the full image is visible
+    const handleImageLoad = useCallback(() => {
+        if (isNearBottomRef.current) {
+            scrollToBottom("smooth");
+        }
+    }, [scrollToBottom]);
+
+    // Initial scroll when chat is opened
     useEffect(() => {
         if (selectedChatId) {
+            isNearBottomRef.current = true;
+            scrollToBottom("auto");
+            lastScrolledChatIdRef.current = selectedChatId;
+        }
+    }, [selectedChatId, scrollToBottom]);
+
+    // Initial scroll when messages finish loading for the selected chat
+    useEffect(() => {
+        if (selectedChatId && !messagesLoading && messagesArray.length > 0 && lastScrolledChatIdRef.current !== selectedChatId) {
+            lastScrolledChatIdRef.current = selectedChatId;
+            isNearBottomRef.current = true;
             scrollToBottom("auto");
         }
-    }, [selectedChatId]);
+    }, [selectedChatId, messagesLoading, messagesArray.length, scrollToBottom]);
 
+    // Auto-scroll when new messages arrive:
+    // If sent by admin or if admin was near bottom (within 3-4 messages), scroll smoothly to bottom.
+    // If admin scrolled further up, do NOT auto-scroll so they can continue reading history.
     useEffect(() => {
-        scrollToBottom("smooth");
-    }, [messagesArray.length, isTyping]);
+        const isNewMessage = messagesArray.length > prevMessagesLengthRef.current;
+        prevMessagesLengthRef.current = messagesArray.length;
+
+        if (isNewMessage) {
+            const lastMsg = messagesArray[messagesArray.length - 1];
+            const sentByMe = lastMsg ? isCurrentUser(lastMsg.sender) : false;
+
+            if (sentByMe || isNearBottomRef.current) {
+                scrollToBottom("smooth");
+            }
+        }
+    }, [messagesArray.length, isCurrentUser, scrollToBottom]);
+
+    // Typing indicator: only scroll if admin is already near the bottom
+    useEffect(() => {
+        if (isTyping && isNearBottomRef.current) {
+            scrollToBottom("smooth");
+        }
+    }, [isTyping, scrollToBottom]);
 
     // When RTK cache updates (e.g. from onQueryStarted injection or page load),
     // remove from localMessages any message whose _id already exists in the RTK
@@ -629,6 +712,10 @@ export default function SupportChatPage() {
         e?.preventDefault();
         if (!selectedChatId || (!input.trim() && !selectedImage)) return;
 
+        // Ensure admin always scrolls to bottom to view their sent message
+        isNearBottomRef.current = true;
+        scrollToBottom("smooth");
+
         const socket = getSocket();
         if (socket && selectedChatId) {
             socket.emit("typing:stop", { chatId: selectedChatId });
@@ -674,17 +761,6 @@ export default function SupportChatPage() {
             setMessageToDelete(null);
         }
     };
-
-    const isCurrentUser = useCallback((sender: any) => {
-        if (!sender) return false;
-        const sId = typeof sender === "object" ? sender._id || sender.id : sender;
-        const myId = currentUserId || currentUser?._id || currentUser?.id;
-        const senderRole = typeof sender === "object" ? sender.role : null;
-
-        if (sId && myId && String(sId) === String(myId)) return true;
-        if (senderRole === "admin") return true;
-        return false;
-    }, [currentUserId, currentUser]);
 
     return (
         <motion.div
@@ -816,6 +892,7 @@ export default function SupportChatPage() {
                                                         src={getAvatarUrl(participant)}
                                                         alt={participant.name || "User"}
                                                         fill
+                                                        sizes="40px"
                                                         className="rounded-full object-cover border border-white dark:border-gray-700"
                                                     />
                                                     
@@ -870,6 +947,7 @@ export default function SupportChatPage() {
                                             src={selectedContact.avatar}
                                             alt={selectedContact.name || "User"}
                                             fill
+                                            sizes="40px"
                                             className="rounded-full object-cover border-2 border-emerald-100 dark:border-emerald-900"
                                         />
                                         
@@ -934,17 +1012,21 @@ export default function SupportChatPage() {
                     </motion.div>
 
                     {/* Messages Window */}
-                    <div className="flex-1 overflow-y-auto bg-gray-50/40 px-3 py-3.5 dark:bg-gray-950/20 md:px-4">
+                    <div
+                        ref={messagesContainerRef}
+                        onScroll={handleScroll}
+                        className="flex-1 overflow-y-auto bg-gray-50/40 px-3 py-3 dark:bg-gray-950/20 md:px-4"
+                    >
                         {selectedContact ? (
-                            <div className="mx-auto max-w-4xl space-y-2.5">
+                            <div className="mx-auto max-w-4xl space-y-2">
                                 {messagesLoading && messagesArray.length === 0 ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                         <div
                                             key={i}
                                             className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}
                                         >
-                                            <div className="max-w-[85%] md:max-w-2xl">
-                                                <div className="rounded-3xl bg-gray-200 dark:bg-gray-800 animate-pulse px-5 py-4 h-16" />
+                                            <div className="max-w-[85%] md:max-w-md">
+                                                <div className="rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse px-4 py-3 h-12" />
                                             </div>
                                         </div>
                                     ))
@@ -963,7 +1045,7 @@ export default function SupportChatPage() {
                                             const fromMe = isCurrentUser(msg.sender);
                                             const imageUrl = cleanImageUrl(msg.image?.url);
                                             const isImageMsg = msg.type === "image" && Boolean(imageUrl);
-                                            const hasTextContent = Boolean(msg.content && msg.content !== "ðŸ“· Image");
+                                            const hasTextContent = Boolean(msg.content && msg.content !== "📷 Image" && msg.content !== "ðŸ“· Image");
                                             const senderAvatar = fromMe
                                                 ? adminAvatar
                                                 : (selectedContact?.avatar || getAvatarUrl(msg.sender));
@@ -982,107 +1064,114 @@ export default function SupportChatPage() {
                                             return (
                                                 <React.Fragment key={msg._id}>
                                                     {showDateDivider && (
-                                                        <div className="flex justify-center my-3">
-                                                            <span className="bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[11px] font-bold px-3 py-0.5 rounded-full shadow-2xs">
+                                                        <div className="flex justify-center my-2.5">
+                                                            <span className="bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-2xs">
                                                                 {formatMessageDateDivider(msg.createdAt)}
                                                             </span>
                                                         </div>
                                                     )}
                                                     <motion.div
                                                         variants={messageVariants}
-                                                    initial="hidden"
-                                                    animate="visible"
-                                                    exit="hidden"
-                                                    layout
-                                                    className={`flex items-end gap-2.5 ${fromMe ? "justify-end" : "justify-start"}`}
-                                                >
-                                                    {!fromMe && (
-                                                        <div className="relative h-8 w-8 shrink-0 mb-5">
-                                                            <Image
-                                                                src={senderAvatar}
-                                                                alt={msg.sender?.name || "User"}
-                                                                fill
-                                                                className="rounded-full object-cover border border-gray-200 shadow-xs dark:border-gray-700"
-                                                            />
-                                                        </div>
-                                                    )}
+                                                        initial="hidden"
+                                                        animate="visible"
+                                                        exit="hidden"
+                                                        layout
+                                                        className={`flex items-end gap-2 ${fromMe ? "justify-end" : "justify-start"}`}
+                                                    >
+                                                        {!fromMe && (
+                                                            <div className="relative h-7 w-7 shrink-0 mb-3.5">
+                                                                <Image
+                                                                    src={senderAvatar}
+                                                                    alt={msg.sender?.name || "User"}
+                                                                    fill
+                                                                    sizes="28px"
+                                                                    className="rounded-full object-cover border border-gray-200 shadow-xs dark:border-gray-700"
+                                                                />
+                                                            </div>
+                                                        )}
 
-                                                    <div className="max-w-[80%] md:max-w-xl group relative">
-                                                        <motion.div
-                                                            whileHover={{ y: -1, transition: { duration: 0.2 } }}
-                                                            className={`relative rounded-3xl shadow-sm transition-all duration-300 ${
-                                                                isImageMsg && !hasTextContent ? "p-1.5" : "px-5 py-4"
-                                                            } ${
-                                                                fromMe
-                                                                    ? "rounded-br-lg bg-emerald-500 text-white shadow-emerald-500/20"
-                                                                    : "rounded-bl-lg border border-gray-100 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                                                            }`}
-                                                        >
-                                                            {isImageMsg && (
-                                                                <div
-                                                                    onClick={() => setPreviewImageUrl(imageUrl)}
-                                                                    className={`group/img relative overflow-hidden rounded-2xl max-w-sm max-h-80 cursor-pointer border border-black/10 dark:border-white/10 ${hasTextContent ? "mb-2" : "mb-0"}`}
-                                                                >
-                                                                    <Image
-                                                                        src={imageUrl}
-                                                                        alt="Message image attachment"
-                                                                        width={350}
-                                                                        height={260}
-                                                                        className="w-full h-auto max-h-80 object-cover rounded-2xl transition-transform duration-300 group-hover/img:scale-105"
-                                                                    />
-                                                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                                                        <Maximize2 className="h-6 w-6" />
+                                                        <div className="max-w-[80%] md:max-w-xl group relative">
+                                                            <motion.div
+                                                                whileHover={{ y: -1, transition: { duration: 0.2 } }}
+                                                                className={`relative rounded-2xl shadow-xs transition-all duration-300 ${
+                                                                    isImageMsg
+                                                                        ? hasTextContent
+                                                                            ? "p-1.5 pb-2"
+                                                                            : "p-1"
+                                                                        : "px-3.5 py-2"
+                                                                } ${
+                                                                    fromMe
+                                                                        ? "rounded-br-sm bg-emerald-500 text-white shadow-emerald-500/20"
+                                                                        : "rounded-bl-sm border border-gray-100 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                                }`}
+                                                            >
+                                                                {isImageMsg && (
+                                                                    <div
+                                                                        onClick={() => setPreviewImageUrl(imageUrl)}
+                                                                        className={`group/img relative overflow-hidden rounded-xl max-w-xs md:max-w-sm max-h-72 cursor-pointer border border-black/10 dark:border-white/10 ${hasTextContent ? "mb-1.5" : "mb-0"}`}
+                                                                    >
+                                                                        <Image
+                                                                            src={imageUrl}
+                                                                            alt="Message image attachment"
+                                                                            width={350}
+                                                                            height={260}
+                                                                            onLoad={handleImageLoad}
+                                                                            className="w-full h-auto max-h-72 object-cover rounded-xl transition-transform duration-300 group-hover/img:scale-105"
+                                                                        />
+                                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                                                            <Maximize2 className="h-5 w-5" />
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            )}
-                                                            {hasTextContent && (
-                                                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                                                    {renderTextWithLinks(msg.content, fromMe)}
-                                                                </p>
-                                                            )}
-                                                        </motion.div>
-
-                                                        <div className="mt-1 flex items-center justify-between gap-2 px-2">
-                                                            <span className="text-[10px] text-gray-400">
-                                                                {formatMessageTime(msg.createdAt)}
-                                                            </span>
-                                                            <div className="flex items-center gap-1">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleDeleteClick(msg._id)}
-                                                                    className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-0.5"
-                                                                    title="Delete message"
-                                                                >
-                                                                    {deletingMessage && messageToDelete === msg._id ? (
-                                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    ) : (
-                                                                        <Trash2 className="h-3 w-3" />
-                                                                    )}
-                                                                </button>
-                                                                {fromMe && (
-                                                                    <span title={isSeenByRecipient ? "Seen" : "Sent (Unseen)"} className="inline-flex">
-                                                                        {isSeenByRecipient ? (
-                                                                            <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />
-                                                                        ) : (
-                                                                            <Check className="h-3.5 w-3.5 text-gray-400" />
-                                                                        )}
-                                                                    </span>
                                                                 )}
+                                                                {hasTextContent && (
+                                                                    <p className={`text-[13.5px] leading-snug whitespace-pre-wrap ${isImageMsg ? "px-1.5 pt-0.5 pb-0.5" : ""}`}>
+                                                                        {renderTextWithLinks(msg.content, fromMe)}
+                                                                    </p>
+                                                                )}
+                                                            </motion.div>
+
+                                                            <div className="mt-0.5 flex items-center justify-between gap-1.5 px-1.5">
+                                                                <span className="text-[10px] text-gray-400">
+                                                                    {formatMessageTime(msg.createdAt)}
+                                                                </span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteClick(msg._id)}
+                                                                        className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-0.5"
+                                                                        title="Delete message"
+                                                                    >
+                                                                        {deletingMessage && messageToDelete === msg._id ? (
+                                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                                        ) : (
+                                                                            <Trash2 className="h-3 w-3" />
+                                                                        )}
+                                                                    </button>
+                                                                    {fromMe && (
+                                                                        <span title={isSeenByRecipient ? "Seen" : "Sent (Unseen)"} className="inline-flex">
+                                                                            {isSeenByRecipient ? (
+                                                                                <CheckCheck className="h-3 w-3 text-emerald-500" />
+                                                                            ) : (
+                                                                                <Check className="h-3 w-3 text-gray-400" />
+                                                                            )}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    {fromMe && (
-                                                        <div className="relative h-8 w-8 shrink-0 mb-5">
-                                                            <Image
-                                                                src={senderAvatar}
-                                                                alt={adminProfile?.name || currentUser?.name || "Admin"}
-                                                                fill
-                                                                className="rounded-full object-cover border border-emerald-300 shadow-xs dark:border-emerald-700"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </motion.div>
+                                                        {fromMe && (
+                                                            <div className="relative h-7 w-7 shrink-0 mb-3.5">
+                                                                <Image
+                                                                    src={senderAvatar}
+                                                                    alt={adminProfile?.name || currentUser?.name || "Admin"}
+                                                                    fill
+                                                                    sizes="28px"
+                                                                    className="rounded-full object-cover border border-emerald-300 shadow-xs dark:border-emerald-700"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </motion.div>
                                                 </React.Fragment>
                                             );
                                         })}
@@ -1091,7 +1180,7 @@ export default function SupportChatPage() {
 
                                 {isTyping && (
                                     <div className="flex justify-start">
-                                        <div className="bg-gray-200 dark:bg-gray-800 rounded-full px-4 py-1.5 text-xs font-semibold text-gray-500 animate-pulse">
+                                        <div className="bg-gray-200 dark:bg-gray-800 rounded-full px-3.5 py-1 text-xs font-semibold text-gray-500 animate-pulse">
                                             {selectedContact.name} is typing...
                                         </div>
                                     </div>
@@ -1110,7 +1199,7 @@ export default function SupportChatPage() {
                     {imagePreview && (
                         <div className="flex items-center gap-3 border-t border-gray-100 bg-emerald-50/50 px-5 py-2.5 dark:border-gray-800 dark:bg-emerald-950/20">
                             <div className="relative h-12 w-12 rounded-xl overflow-hidden border border-emerald-200">
-                                <Image src={imagePreview} alt="Selected preview" fill className="object-cover" />
+                                <Image src={imagePreview} alt="Selected preview" fill sizes="48px" className="object-cover" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
@@ -1191,6 +1280,7 @@ export default function SupportChatPage() {
                                         src={selectedContact.avatar}
                                         alt={selectedContact.name || "User"}
                                         fill
+                                        sizes="80px"
                                         className="rounded-full object-cover border-4 border-white shadow-sm dark:border-gray-800"
                                     />
                                 </div>
@@ -1256,6 +1346,7 @@ export default function SupportChatPage() {
                                                         src={imageUrl}
                                                         alt="Shared media attachment"
                                                         fill
+                                                        sizes="(max-width: 768px) 33vw, 80px"
                                                         className="object-cover"
                                                     />
                                                 </div>
@@ -1354,6 +1445,7 @@ export default function SupportChatPage() {
                                     src={previewImageUrl}
                                     alt="Enlarged attachment"
                                     fill
+                                    sizes="(max-width: 1024px) 100vw, 896px"
                                     className="object-contain rounded-2xl"
                                 />
                             </div>

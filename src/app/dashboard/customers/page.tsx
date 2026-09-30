@@ -353,6 +353,7 @@ export default function CustomersPage() {
                                                             src={cleanImageUrl(user.avatar.url)}
                                                             alt={user.name}
                                                             fill
+                                                            sizes="48px"
                                                             className="rounded-2xl object-cover ring-2 ring-gray-100 dark:ring-gray-700"
                                                         />
                                                     ) : (
@@ -463,6 +464,7 @@ export default function CustomersPage() {
                                                 src={cleanImageUrl(user.avatar.url)}
                                                 alt={user.name}
                                                 fill
+                                                sizes="56px"
                                                 className="rounded-2xl object-cover"
                                             />
                                         ) : (

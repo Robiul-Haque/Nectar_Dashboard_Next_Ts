@@ -251,6 +251,7 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                                         src={cleanImageUrl(profile.avatar)}
                                                         alt={profile.name}
                                                         fill
+                                                        sizes="80px"
                                                         className="rounded-3xl object-cover ring-4 ring-emerald-500/10"
                                                     />
                                                 ) : (
@@ -560,6 +561,7 @@ export default function CustomerDetailsDrawer({ customerId, isOpen, onClose }: C
                                                                                         src={cleanImageUrl(item.image)}
                                                                                         alt={item.name || "Product"}
                                                                                         fill
+                                                                                        sizes="40px"
                                                                                         className="object-cover"
                                                                                     />
                                                                                 ) : (
