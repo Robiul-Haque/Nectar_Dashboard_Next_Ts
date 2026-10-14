@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Send, Paperclip, Check, CheckCheck, Loader2, Trash2, X, MessageSquare, Truck, CheckCircle2, RotateCcw, Maximize2 } from "lucide-react";
+import { Search, Send, Paperclip, Check, CheckCheck, Loader2, Trash2, X, MessageSquare, CheckCircle2, RotateCcw, Maximize2 } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useGetChatsQuery, useGetChatDetailsQuery, useGetMessagesQuery, useSendMessageMutation, useMarkAsReadMutation, useDeleteMessageMutation, useUpdateChatStatusMutation, chatApi } from "@/redux/features/chat/chatApi";
 import type { Chat, Message as ChatMessage, Participant } from "@/redux/features/chat/chatTypes";
@@ -343,7 +343,7 @@ export default function SupportChatPage() {
             );
 
             // Update left sidebar chat list preview and unread count
-            ["all", "customer_support", "driver_support"].forEach((filter) => {
+            ["all", "customer_support"].forEach((filter) => {
                 dispatch(
                     chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
                         if (draft?.data) {
@@ -362,7 +362,7 @@ export default function SupportChatPage() {
         };
 
         const handleStatusUpdate = ({ chatId, status: newStatus }: { chatId: string; status: "open" | "resolved" }) => {
-            ["all", "customer_support", "driver_support"].forEach((filter) => {
+            ["all", "customer_support"].forEach((filter) => {
                 dispatch(
                     chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
                         if (draft?.data) {
@@ -468,7 +468,7 @@ export default function SupportChatPage() {
                 );
             }
 
-            ["all", "customer_support", "driver_support"].forEach((filter) => {
+            ["all", "customer_support"].forEach((filter) => {
                 dispatch(
                     chatApi.util.updateQueryData("getChats", { page: 1, limit: 50, chatType: filter }, (draft) => {
                         if (draft?.data) {
@@ -776,42 +776,13 @@ export default function SupportChatPage() {
                     className="hidden lg:flex flex-col border-r border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-gray-950/40"
                 >
                     <div className="border-b border-gray-100 p-5 dark:border-gray-800 space-y-4">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Support Messages
-                        </h2>
-
-                        {/* Separate Inboxes: Customer Support vs Driver Support */}
-                        <div className="flex rounded-2xl bg-gray-200/70 p-1 dark:bg-gray-800">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setChatTypeFilter("customer_support");
-                                    setSelectedChatId(null);
-                                }}
-                                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all ${
-                                    chatTypeFilter === "customer_support"
-                                        ? "bg-white text-emerald-600 shadow-sm dark:bg-gray-900 dark:text-emerald-400"
-                                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
-                                }`}
-                            >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                                Customer
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setChatTypeFilter("driver_support");
-                                    setSelectedChatId(null);
-                                }}
-                                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all ${
-                                    chatTypeFilter === "driver_support"
-                                        ? "bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400"
-                                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
-                                }`}
-                            >
-                                <Truck className="h-3.5 w-3.5" />
-                                Driver
-                            </button>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Customer Support
+                            </h2>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Real-time customer inquiries & conversations
+                            </p>
                         </div>
 
                         {/* Search Input */}
@@ -861,7 +832,7 @@ export default function SupportChatPage() {
                                     </div>
                                 </div>
                                 <p className="text-gray-600 dark:text-gray-300 font-medium text-sm">
-                                    {searchQuery ? "No matching conversations" : `No ${chatTypeFilter === "driver_support" ? "driver" : "customer"} messages`}
+                                    {searchQuery ? "No matching conversations" : "No customer messages yet"}
                                 </p>
                             </div>
                         ) : (
@@ -898,11 +869,7 @@ export default function SupportChatPage() {
                                                     />
                                                     
                                                 </div>
-                                                {chat.chatType === "driver_support" && (
-                                                    <span className="absolute -bottom-1 -right-1 bg-blue-500 text-[9px] text-white px-1 rounded-full font-bold">
-                                                        D
-                                                    </span>
-                                                )}
+                                                
                                             </div>
 
                                             <div className="min-w-0 flex-1">
